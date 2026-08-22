@@ -1,8 +1,6 @@
 # Jobs Serving API
 
 API chỉ-đọc phục vụ dữ liệu tin tuyển dụng cho team AI.
-Trạng thái: **Tuần 2 / 8 — hợp đồng API đã xong, dữ liệu còn là giả lập.**
-
 ---
 
 ## 1. Chạy trong 3 phút
@@ -106,14 +104,3 @@ Mọi biến đều có tiền tố `JOBS_API_`. Xem `.env.example`.
 5. **`page_token` phải được ký và validate.** Nó là input của người gọi.
 
 ---
-
-## 6. Lộ trình còn lại
-
-| Tuần | Việc | Ảnh hưởng tới code này |
-|---|---|---|
-| 3 | Nối kho dữ liệu thật | Thêm `warehouse/duckdb.py`, `warehouse/bigquery.py`; sửa `deps.py`. Handler không đổi. |
-| 4 | QueryValidator + kiểm soát chi phí | Thêm `domain/validator.py`, gọi trước `repo.search()` |
-| 5 | Gold table + cache | Thêm `api/market.py`, lớp cache |
-| 6 | Auth + rate limit | Thêm dependency `require_client`; thêm `client_id` vào log |
-| 7 | Docker + Cloud Run + CI/CD | Thêm `Dockerfile`, workflow |
-| 8 | Tracing + bàn giao | Thêm OpenTelemetry, client Python mẫu, test token |
