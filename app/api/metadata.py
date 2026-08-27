@@ -20,7 +20,7 @@ from app.domain.catalog import (
 from app.models.metadata import FilterInfo, LimitsInfo, MetadataResponse, MetricInfo
 from app.observability.logging import get_request_id
 from app.settings import get_settings
-from app.warehouse.base import JobRepository
+from app.domain.ports.job_repository import JobRepository
 
 router = APIRouter(tags=["discovery"])
 

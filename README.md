@@ -1,7 +1,8 @@
 # Jobs Serving API
 
 API chỉ-đọc phục vụ dữ liệu tin tuyển dụng cho team AI.
-Trạng thái: **Tuần 2 / 8 — hợp đồng API đã xong, dữ liệu còn là giả lập.**
+Trạng thái: **Tuần 4 / 8 — QueryValidator + an toàn truy vấn đã xong (60 test xanh).**
+> Bản hoàn thiện W3+W4. Hướng dẫn chạy & đọc code: **HUONG-DAN-CHAY-VA-DOC-CODE.md**
 
 ---
 
@@ -61,25 +62,45 @@ app/
 ├── main.py                khởi tạo app, middleware, xử lý lỗi, gắn router
 ├── settings.py            cấu hình từ biến môi trường (không hard-code)
 ├── errors.py              cây lỗi + mã lỗi ổn định
-├── api/
-│   ├── deps.py            dependency injection (đổi repository không sửa handler)
+│
+├── api/                   controller mỏng + composition root
+│   ├── deps.py            ráp interface ↔ impl (nơi DUY NHẤT biết adapter cụ thể)
 │   ├── health.py          GET  /health
 │   ├── metadata.py        GET  /v1/metadata
-│   └── jobs.py            POST /v1/jobs/search
-├── models/                hợp đồng đối ngoại (Pydantic) — thứ consumer nhìn thấy
-│   ├── enums.py           giá trị hợp lệ cho filter
-│   ├── common.py          envelope lỗi, health
+│   ├── jobs.py            POST /v1/jobs/search
+│   └── market.py          GET  /v1/market/metrics
+│
+├── domain/                LÕI: quy tắc + hợp đồng (không phụ thuộc bên ngoài)
+│   ├── catalog.py         ★ nguồn sự thật cho filter/metric
+│   ├── validator.py       ★ QueryValidator (allowlist, k-anonymity)
+│   ├── pagination.py      ★ page_token ký HMAC
+│   └── ports/             interface + DTO đi kèm
+│       ├── job_repository.py      JobRepository + SearchResult
+│       ├── metrics_repository.py  MetricsRepository + MetricRow
+│       └── cache.py               CacheBackend
+│
+├── infrastructure/        RÌA: adapter nói chuyện với thế giới ngoài
+│   ├── cache/
+│   │   ├── memory.py       InMemoryCache (cachetools)
+│   │   └── redis.py        RedisCache
+│   └── warehouse/
+│       ├── duckdb_jobs.py      DuckDBJobRepository
+│       ├── duckdb_metrics.py   DuckDBMetricsRepository
+│       ├── fake_jobs.py        FakeJobRepository (test double)
+│       ├── fake_metrics.py     FakeMetricsRepository
+│       └── sql/search_jobs.sql
+│
+├── models/                DTO Pydantic (hợp đồng đối ngoại)
+│   ├── enums.py
+│   ├── common.py
 │   ├── metadata.py
-│   └── jobs.py
-├── domain/
-│   ├── catalog.py         ★ nguồn sự thật cho filter/metric (tài liệu + validate)
-│   └── pagination.py      ★ page_token ký HMAC
-├── warehouse/
-│   ├── base.py            interface JobRepository
-│   └── fake.py            hiện thực giả lập (Tuần 3 thêm DuckDB/BigQuery)
+│   ├── jobs.py
+│   └── market.py
+│
+├── elt/                   job offline: build_silver.py, build_gold.py
 └── observability/
     └── logging.py         log JSON + request_id
-tests/                     23 test: hợp đồng, phân trang, lỗi, OpenAPI
+tests/                     42 test: hợp đồng, phân trang, validator, injection, market
 ```
 
 ---
@@ -111,7 +132,7 @@ Mọi biến đều có tiền tố `JOBS_API_`. Xem `.env.example`.
 
 | Tuần | Việc | Ảnh hưởng tới code này |
 |---|---|---|
-| 3 | Nối kho dữ liệu thật | Thêm `warehouse/duckdb.py`, `warehouse/bigquery.py`; sửa `deps.py`. Handler không đổi. |
+| 3 | Nối kho dữ liệu thật | Thêm `infrastructure/warehouse/duckdb_jobs.py` (+ bigquery sau); sửa `deps.py`. Handler không đổi. |
 | 4 | QueryValidator + kiểm soát chi phí | Thêm `domain/validator.py`, gọi trước `repo.search()` |
 | 5 | Gold table + cache | Thêm `api/market.py`, lớp cache |
 | 6 | Auth + rate limit | Thêm dependency `require_client`; thêm `client_id` vào log |

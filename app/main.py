@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api import health, jobs, metadata
+from app.api import health, jobs, market, metadata   # ★ THÊM 'market' (Tuần 5)
 from app.errors import AppError
 from app.models.common import ErrorDetail, ErrorResponse
 from app.observability.logging import (
@@ -41,6 +41,7 @@ TAGS_METADATA = [
     {"name": "operations", "description": "Vận hành: kiểm tra sống."},
     {"name": "discovery", "description": "Tự mô tả: filter và metric hợp lệ."},
     {"name": "jobs", "description": "Tìm kiếm tin tuyển dụng."},
+    {"name": "market", "description": "Benchmark lương theo cấp bậc/quốc gia."},   # ★ Tuần 5
 ]
 
 
@@ -96,6 +97,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)                       # /health  (không version)
     app.include_router(metadata.router, prefix="/v1")       # /v1/metadata
     app.include_router(jobs.router, prefix="/v1")           # /v1/jobs/search
+    app.include_router(market.router, prefix="/v1")         # ★ /v1/market/metrics (Tuần 5)
 
     return app
 

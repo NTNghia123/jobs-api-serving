@@ -1,24 +1,20 @@
-"""Repository giả lập — dữ liệu mẫu MÔ PHỎNG hình dạng thật của job_post × company.
+"""Adapter giả lập (test double) cho JobRepository — dữ liệu mẫu, không cần DuckDB.
 
-Ở Tuần 3, cái này được thay bằng đường ELT MySQL → DuckDB. Dữ liệu mẫu ở đây
-cố ý giống DB thật: công ty nước ngoài, lương là số nguyên (không đơn vị tiền tệ),
-số năm kinh nghiệm 1..5, seniority SUY RA từ số năm. Tiêu đề để giống dữ liệu
-seed (cụt, kiểu Lorem) để nhắc rằng đây chưa phải dữ liệu sạch.
+Trước refactor: app/warehouse/fake.py. Dùng cho test và backend `fake`. Dữ liệu mẫu
+mô phỏng hình dạng thật (công ty nước ngoài, lương số nguyên, seniority suy từ số năm).
 """
 from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from app.domain.ports.job_repository import JobRepository, SearchResult
 from app.models.enums import Seniority, SortOption
 from app.models.jobs import JobItem, SearchRequest
-from app.warehouse.base import JobRepository, SearchResult
 
-# Độ tươi = thời điểm ELT chạy (giả lập).
 _AS_OF = datetime(2025, 8, 17, 0, 0, tzinfo=timezone.utc)
 
 
 def _seniority_from_years(y: int) -> Seniority:
-    """Quy tắc chuẩn hoá — CHỐT MỘT LẦN ở đây (Tuần 3 chuyển vào transform)."""
     if y <= 1:
         return Seniority.JUNIOR
     if y <= 3:

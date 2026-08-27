@@ -1,7 +1,8 @@
-"""Interface của lớp truy cập dữ liệu.
+"""Port: hợp đồng truy cập tin tuyển dụng (interface + DTO trả về).
 
-Tuần 2 chỉ có bản Fake. Tuần 3 thêm DuckDB (dev) và BigQuery (prod) mà KHÔNG
-phải sửa bất kỳ dòng nào trong app/api/. Đó là mục đích của interface này.
+Đây là 'cổng' của lõi: handler và các adapter đều phụ thuộc vào interface này, không
+phụ thuộc lẫn nhau. Impl cụ thể (DuckDB/Fake) nằm ở app/infrastructure/warehouse/.
+Xem docs/adr/ADR-003, ADR-011.
 """
 from __future__ import annotations
 
