@@ -4,3 +4,5 @@ __pycache__/
 .env
 .pytest_cache/
 openapi.json
+Report/
+de-plan-jobs-ver2.md
