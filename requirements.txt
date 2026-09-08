@@ -2,3 +2,11 @@ fastapi>=0.115
 pydantic>=2.9
 pydantic-settings>=2.5
 uvicorn[standard]>=0.30
+# ★ THÊM Ở TUẦN 3 — chặng ELT MySQL → DuckDB
+duckdb>=1.0
+pandas>=2.0
+sqlalchemy>=2.0
+pymysql>=1.1
+# ★ THÊM Ở TUẦN 5 — caching (/market/metrics)
+cachetools>=5.0
+redis>=5.0         # chỉ cần khi JOBS_API_CACHE_BACKEND=redis (cần một Redis server chạy)

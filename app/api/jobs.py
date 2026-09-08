@@ -1,8 +1,13 @@
 """/v1/jobs/search — hoạt động nghiệp vụ chính.
 
-Tuần 2: hợp đồng đã đầy đủ, dữ liệu đến từ FakeJobRepository.
-Tuần 3: đổi repository sang warehouse adapter thật — file này không đổi.
-Tuần 4: chèn QueryValidator vào trước lời gọi repo.
+[FILE SỬA]  Đích thật: app/api/jobs.py
+So với bản Tuần 3, chỉ THÊM: 1 import + 1 instance validator + 1 dòng gọi
+validator.validate_search(req) ở ĐẦU handler (đánh dấu ★). Đây là lần ĐẦU TIÊN được
+phép sửa jobs.py — đúng như comment đã báo trước từ Tuần 2.
+
+Tuần 2: hợp đồng đầy đủ, dữ liệu từ FakeJobRepository.
+Tuần 3: đổi repository sang DuckDB — file này KHÔNG đổi.
+Tuần 4: chèn QueryValidator vào trước lời gọi repo.   ← TUẦN NÀY
 """
 from __future__ import annotations
 
@@ -12,14 +17,16 @@ from fastapi import APIRouter, Depends
 
 from app.api.deps import get_repository
 from app.domain.pagination import decode_page_token, encode_page_token, filters_fingerprint
+from app.domain.validator import QueryValidator          # ★ THÊM Ở TUẦN 4
 from app.models.common import ErrorResponse
 from app.models.jobs import SearchRequest, SearchResponse
 from app.observability.logging import get_request_id, log_event
 from app.settings import get_settings
-from app.warehouse.base import JobRepository
+from app.domain.ports.job_repository import JobRepository
 
 router = APIRouter(tags=["jobs"])
 logger = logging.getLogger("api.jobs")
+validator = QueryValidator()                              # ★ THÊM Ở TUẦN 4 (stateless, dùng chung)
 
 
 @router.post(
@@ -42,6 +49,11 @@ def search_jobs(
     repo: JobRepository = Depends(get_repository),
 ) -> SearchResponse:
     settings = get_settings()
+
+    # ★ THÊM Ở TUẦN 4 — CỔNG KIỂM SOÁT: chạy TRƯỚC khi chạm repository/SQL.
+    # GIẢI THÍCH: Pydantic đã chặn phần lớn ở biên; đây là lớp chính sách + phòng thủ
+    # theo chiều sâu, và là chỗ chính sách tương lai (k-anonymity, dimension/metric) sống.
+    validator.validate_search(req)
 
     # Vân tay của "hình dạng truy vấn" — token chỉ dùng lại được cho đúng truy vấn đó.
     fingerprint = filters_fingerprint(

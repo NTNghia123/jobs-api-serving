@@ -7,11 +7,12 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request        # ★ THÊM Depends (Tuần 6)
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api import health, jobs, metadata
+from app.api import health, jobs, market, metadata   # ★ THÊM 'market' (Tuần 5)
+from app.api.auth import require_client              # ★ THÊM Ở TUẦN 6
 from app.errors import AppError
 from app.models.common import ErrorDetail, ErrorResponse
 from app.observability.logging import (
@@ -27,6 +28,8 @@ logger = logging.getLogger("api.error")
 API_DESCRIPTION = """
 API chỉ-đọc phục vụ dữ liệu tin tuyển dụng cho các hệ thống nội bộ (team AI).
 
+**Xác thực**: mọi endpoint `/v1` cần header `X-API-Key`. `/health` không cần. Vượt hạn mức → 429.
+
 **Nguyên tắc sử dụng**
 * Chỉ dùng filter và giá trị có trong `GET /v1/metadata` (seniority, experience_max, salary_min, country).
 * Chỉ dùng filter và giá trị có trong `GET /v1/metadata`.
@@ -41,6 +44,7 @@ TAGS_METADATA = [
     {"name": "operations", "description": "Vận hành: kiểm tra sống."},
     {"name": "discovery", "description": "Tự mô tả: filter và metric hợp lệ."},
     {"name": "jobs", "description": "Tìm kiếm tin tuyển dụng."},
+    {"name": "market", "description": "Benchmark lương theo cấp bậc/quốc gia."},   # ★ Tuần 5
 ]
 
 
@@ -93,9 +97,14 @@ def create_app() -> FastAPI:
         return _error_response(500, "INTERNAL", "Lỗi nội bộ. Hãy gửi kèm request_id khi báo lỗi.")
 
     # ---- Router ----
-    app.include_router(health.router)                       # /health  (không version)
-    app.include_router(metadata.router, prefix="/v1")       # /v1/metadata
-    app.include_router(jobs.router, prefix="/v1")           # /v1/jobs/search
+    # ★ Tuần 6: /health KHÔNG có auth (luôn mở). Ba router /v1 gắn require_client ở cấp
+    # router → mọi endpoint dữ liệu đều sau lớp xác thực + rate-limit. /docs và
+    # /openapi.json vẫn mở (là tài liệu hợp đồng cho team AI ở Tuần 8).
+    auth = [Depends(require_client)]                                       # ★ THÊM Ở TUẦN 6
+    app.include_router(health.router)                                      # /health (mở)
+    app.include_router(metadata.router, prefix="/v1", dependencies=auth)   # ★ /v1/metadata
+    app.include_router(jobs.router, prefix="/v1", dependencies=auth)       # ★ /v1/jobs/search
+    app.include_router(market.router, prefix="/v1", dependencies=auth)     # ★ /v1/market/metrics
 
     return app
 

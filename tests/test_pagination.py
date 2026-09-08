@@ -27,7 +27,8 @@ def test_token_cua_bo_filter_khac_bi_tu_choi():
 
 def test_phan_trang_khong_trung_khong_sot(client):
     seen, token = [], None
-    for _ in range(20):
+    # 100 bản ghi với limit=3 cần 34 trang; chừa dư để còn phát hiện token lặp vô hạn.
+    for _ in range(100):
         body = {"limit": 3}
         if token:
             body["page_token"] = token
@@ -36,6 +37,7 @@ def test_phan_trang_khong_trung_khong_sot(client):
         token = data["next_page_token"]
         if not token:
             break
+    assert not token, "phân trang không kết thúc"
     assert len(seen) == len(set(seen)), "có bản ghi bị trùng giữa các trang"
     assert len(seen) == data["total_estimated"], "có bản ghi bị sót"
 

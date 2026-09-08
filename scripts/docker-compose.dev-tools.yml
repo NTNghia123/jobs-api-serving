@@ -1,0 +1,44 @@
+# Gộp 2 container dev-tool (MySQL nguồn + phpMyAdmin để xem dữ liệu) thành 1 file.
+#
+# KHÁC với docker-compose.yml của Tuần 7 (theo kế hoạch): bản Tuần 7 gộp MySQL + CHÍNH API
+# FastAPI để triển khai. Bản này chỉ để BẠN xem dữ liệu khi phát triển — không dùng để deploy.
+#
+# Chạy:  docker compose -f scripts/docker-compose.dev-tools.yml up -d
+# Dừng:  docker compose -f scripts/docker-compose.dev-tools.yml down
+# (thêm --volumes vào lệnh down nếu muốn xoá luôn dữ liệu MySQL, mặc định KHÔNG xoá)
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: jobportal-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpw
+      MYSQL_DATABASE: jobportal
+    ports:
+      - "3307:3306"      # 3307 vì máy có thể đã có MySQL native chiếm 3306 (xem HUONG-DAN...)
+    volumes:
+      # Cả 2 file .sql dưới đây CHỈ chạy 1 LẦN DUY NHẤT khi volume rỗng (lần đầu tạo), theo
+      # đúng thứ tự alphabet (database.sql trước init-reader-user.sql). Các lần sau khởi động
+      # lại, dữ liệu đã có sẵn trong volume nên KHÔNG chạy lại — không bị nhân đôi/tạo trùng user.
+      - ../database.sql:/docker-entrypoint-initdb.d/database.sql:ro
+      - ./init-reader-user.sql:/docker-entrypoint-initdb.d/init-reader-user.sql:ro
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpw"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  phpmyadmin:
+    image: phpmyadmin
+    container_name: jobportal-phpmyadmin
+    environment:
+      PMA_HOST: mysql        # tên SERVICE ở trên (không phải container_name) — Compose tự phân giải
+    ports:
+      - "8081:80"
+    depends_on:
+      mysql:
+        condition: service_healthy   # đợi MySQL THẬT SỰ sẵn sàng, không chỉ "đã khởi động"
+
+volumes:
+  mysql_data:   # dữ liệu MySQL sống ở đây, độc lập với container — xoá container không mất data
