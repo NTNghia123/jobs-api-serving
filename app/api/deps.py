@@ -18,13 +18,17 @@ from __future__ import annotations
 from functools import lru_cache
 
 # Ports (interface) — thuộc lõi
+from app.domain.ports.api_key_store import ApiKeyStore          # ★ THÊM Ở TUẦN 6
 from app.domain.ports.cache import CacheBackend
 from app.domain.ports.job_repository import JobRepository
 from app.domain.ports.metrics_repository import MetricsRepository
+from app.domain.ports.rate_limiter import RateLimiter          # ★ THÊM Ở TUẦN 6
 
 # Adapters (implementation) — chỉ composition root này được import infrastructure
+from app.infrastructure.auth.config_key_store import ConfigApiKeyStore   # ★ THÊM Ở TUẦN 6
 from app.infrastructure.cache.memory import InMemoryCache
 from app.infrastructure.cache.redis import RedisCache
+from app.infrastructure.ratelimit.memory import InMemoryRateLimiter      # ★ THÊM Ở TUẦN 6
 from app.infrastructure.warehouse.duckdb_jobs import DuckDBJobRepository
 from app.infrastructure.warehouse.duckdb_metrics import DuckDBMetricsRepository
 from app.infrastructure.warehouse.fake_jobs import FakeJobRepository
@@ -74,3 +78,17 @@ def _build_cache(backend: str, redis_url: str, ttl: int) -> CacheBackend:
 def get_cache() -> CacheBackend:
     s = get_settings()
     return _build_cache(s.cache_backend, s.redis_url, s.cache_ttl_seconds)
+
+
+# ★ THÊM Ở TUẦN 6 — kho API key (đọc từ config; local tự seed key dev).
+@lru_cache
+def get_api_key_store() -> ApiKeyStore:
+    return ConfigApiKeyStore.from_settings(get_settings())
+
+
+# ★ THÊM Ở TUẦN 6 — rate limiter dùng chung (singleton nhờ lru_cache).
+@lru_cache
+def get_rate_limiter() -> RateLimiter:
+    s = get_settings()
+    capacity = s.rate_limit_burst or s.rate_limit_per_minute
+    return InMemoryRateLimiter(rate_per_sec=s.rate_limit_per_minute / 60.0, capacity=capacity)

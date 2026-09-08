@@ -44,6 +44,11 @@ class InvalidPageTokenError(AppError):
     code = "INVALID_PAGE_TOKEN"
 
 
+class UnauthorizedError(AppError):  # ★ THÊM Ở TUẦN 6 — thiếu/sai/hết hạn API key
+    status_code = 401
+    code = "UNAUTHORIZED"
+
+
 class NotFoundError(AppError):
     status_code = 404
     code = "NOT_FOUND"

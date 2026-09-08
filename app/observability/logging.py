@@ -19,10 +19,19 @@ from starlette.requests import Request
 
 REQUEST_ID_HEADER = "X-Request-ID"
 _request_id: ContextVar[str] = ContextVar("request_id", default="-")
+_client_id: ContextVar[str] = ContextVar("client_id", default="-")   # ★ THÊM Ở TUẦN 6
 
 
 def get_request_id() -> str:
     return _request_id.get()
+
+
+def get_client_id() -> str:                 # ★ THÊM Ở TUẦN 6
+    return _client_id.get()
+
+
+def set_client_id(client_id: str) -> None:  # ★ THÊM Ở TUẦN 6
+    _client_id.set(client_id)
 
 
 class JsonFormatter(logging.Formatter):
@@ -35,10 +44,11 @@ class JsonFormatter(logging.Formatter):
             "message": record.getMessage(),
             "logger": record.name,
             "request_id": get_request_id(),
+            "client_id": get_client_id(),        # ★ THÊM: mọi log tự có client_id
         }
         extra = getattr(record, "extra_fields", None)
         if extra:
-            payload.update(extra)
+            payload.update(extra)                 # field tường minh (vd access-log) ghi đè
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
         return json.dumps(payload, ensure_ascii=False)
@@ -88,6 +98,10 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             return response
         finally:
             elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
+            # ★ BẪY: BaseHTTPMiddleware chạy downstream ở TASK KHÁC, nên ContextVar
+            # client_id set trong dependency KHÔNG chắc thấy ở đây. Đọc từ request.state
+            # (scope["state"] dùng chung) mới chắc chắn. "-" nếu request không qua auth.
+            client_id = getattr(request.state, "client_id", "-")
             log_event(
                 self.logger,
                 logging.INFO,
@@ -96,6 +110,6 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
                 path=request.url.path,
                 status=status,
                 latency_ms=elapsed_ms,
-                # client_id sẽ được thêm ở Tuần 6 sau khi có auth
+                client_id=client_id,          # ★ THÊM Ở TUẦN 6
             )
             _request_id.reset(token)

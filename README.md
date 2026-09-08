@@ -1,8 +1,8 @@
 # Jobs Serving API
 
 API chỉ-đọc phục vụ dữ liệu tin tuyển dụng cho team AI.
-Trạng thái: **Tuần 4 / 8 — QueryValidator + an toàn truy vấn đã xong (60 test xanh).**
-> Bản hoàn thiện W3+W4. Hướng dẫn chạy & đọc code: **HUONG-DAN-CHAY-VA-DOC-CODE.md**
+Trạng thái: **Tuần 6 / 8 — Gold table, cache, API key và rate limit đã hoàn thành (50 test xanh).**
+> Bản hoàn thiện W3–W6. Hướng dẫn chạy & đọc code: **HUONG-DAN-CHAY-VA-DOC-CODE.md**
 
 ---
 
@@ -22,7 +22,7 @@ Bấm **Try it out** trên `POST /v1/jobs/search` để gọi thử ngay trên t
 Chạy test:
 
 ```bash
-pytest -q          # 23 test
+pytest tests -q    # 50 test
 make test          # tương đương
 ```
 
@@ -100,7 +100,7 @@ app/
 ├── elt/                   job offline: build_silver.py, build_gold.py
 └── observability/
     └── logging.py         log JSON + request_id
-tests/                     42 test: hợp đồng, phân trang, validator, injection, market
+tests/                     50 test: hợp đồng, phân trang, validator, injection, market, auth, rate limit
 ```
 
 ---
@@ -132,9 +132,5 @@ Mọi biến đều có tiền tố `JOBS_API_`. Xem `.env.example`.
 
 | Tuần | Việc | Ảnh hưởng tới code này |
 |---|---|---|
-| 3 | Nối kho dữ liệu thật | Thêm `infrastructure/warehouse/duckdb_jobs.py` (+ bigquery sau); sửa `deps.py`. Handler không đổi. |
-| 4 | QueryValidator + kiểm soát chi phí | Thêm `domain/validator.py`, gọi trước `repo.search()` |
-| 5 | Gold table + cache | Thêm `api/market.py`, lớp cache |
-| 6 | Auth + rate limit | Thêm dependency `require_client`; thêm `client_id` vào log |
 | 7 | Docker + Cloud Run + CI/CD | Thêm `Dockerfile`, workflow |
 | 8 | Tracing + bàn giao | Thêm OpenTelemetry, client Python mẫu, test token |
