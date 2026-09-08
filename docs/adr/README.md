@@ -45,7 +45,9 @@ bối cảnh, phương án đã chọn, các phương án bị loại, và hệ 
 | [ADR-009](ADR-009-cache-in-process.md) | Cache qua interface (in-memory/Redis), chọn bằng config | 5 | Đã chấp nhận |
 | [ADR-010](ADR-010-luong-dai-dien-trung-diem.md) | "Lương đại diện" = trung điểm; benchmark bằng median | 5 | Đã chấp nhận |
 | [ADR-011](ADR-011-refactor-hexagonal.md) | Refactor sang cấu trúc hexagonal (ports & adapters) | 5 | Đã chấp nhận |
+| [ADR-012](ADR-012-api-key-hashed-vs-jwt.md) | Xác thực API key (lưu hash + hạn dùng), không JWT | 6 | Đã chấp nhận |
+| [ADR-013](ADR-013-rate-limit-in-process.md) | Rate-limit token bucket in-process; Redis để sau | 6 | Đã chấp nhận |
 
 > Chỉ mục xếp theo tuần ra quyết định (số ADR chỉ là thứ tự tạo file, không cần liên tục theo tuần).
-> Còn để dành cho các tuần sau: API key vs JWT (Tuần 6); Cloud Run concurrency/cost + BigQuery
-> dry-run/max_bytes_billed + chuyển cache sang Redis mặc định (Tuần 7).
+> Còn để dành cho các tuần sau: Cloud Run concurrency/cost + BigQuery dry-run/max_bytes_billed +
+> chuyển cache & rate-limit sang Redis mặc định (Tuần 7); OpenTelemetry tracing + handoff (Tuần 8).
