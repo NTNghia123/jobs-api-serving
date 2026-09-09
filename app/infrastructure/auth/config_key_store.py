@@ -32,7 +32,7 @@ class ConfigApiKeyStore(ApiKeyStore):
         self._entries = entries
 
     @classmethod
-    def from_settings(cls, settings) -> "ConfigApiKeyStore":
+    def from_settings(cls, settings) -> ConfigApiKeyStore:
         """Dựng store từ settings.api_keys; nếu rỗng và env=local thì seed key dev."""
         entries = [
             _Entry(client_id=cid, key_hash=rec.key_sha256, expires_at=rec.expires_at)

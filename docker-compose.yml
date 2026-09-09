@@ -1,0 +1,78 @@
+# Tuần 7 — dựng CẢ HỆ bằng một lệnh:  docker compose up --build
+# Bốn service, khởi động theo đúng thứ tự phụ thuộc:
+#   mysql  (nguồn OLTP)  →  elt-init (bóc→sạch→gold, chạy 1 lần rồi thoát)  →  api
+#   redis  (cache + rate-limit chia sẻ giữa các instance)  →  api
+# Xem docs/adr/ADR-015 (topology compose) và ADR-014 (image).
+#
+# KHÁC scripts/docker-compose.dev-tools.yml: bản kia chỉ MySQL + phpMyAdmin để xem dữ liệu khi dev.
+
+services:
+  # ---------- Nguồn OLTP ----------
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpw
+      MYSQL_DATABASE: jobportal
+    volumes:
+      # Chạy 1 LẦN khi volume rỗng, theo thứ tự alphabet: database.sql trước, rồi tạo user reader.
+      - ./database.sql:/docker-entrypoint-initdb.d/database.sql:ro
+      - ./scripts/init-reader-user.sql:/docker-entrypoint-initdb.d/init-reader-user.sql:ro
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpw"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Không publish cổng ra host: API nói chuyện với MySQL trong mạng nội bộ của compose.
+
+  # ---------- Cache + rate-limit chia sẻ ----------
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ---------- Job ELT khởi tạo (one-shot) ----------
+  # Dùng CHUNG image với api. Bóc MySQL → silver_jobs, rồi nướng gold, ghi vào /data/analytics.duckdb.
+  # Chạy xong THOÁT (0). api chờ service này 'completed_successfully' rồi mới mở kho (read_only).
+  elt-init:
+    build: .
+    command: sh -c "python -m app.elt.build_silver && python -m app.elt.build_gold"
+    environment:
+      JOBS_API_MYSQL_URL: mysql+pymysql://reader:reader_pw@mysql:3306/jobportal   # user CHỈ-ĐỌC
+      JOBS_API_DUCKDB_PATH: /data/analytics.duckdb
+    volumes:
+      - duckdb_data:/data
+    depends_on:
+      mysql:
+        condition: service_healthy   # đợi MySQL THẬT SỰ sẵn sàng, không chỉ 'đã khởi động'
+
+  # ---------- Tầng phục vụ ----------
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      JOBS_API_ENV: local              # local: tự seed key dev 'dev-local-key-team-ai' cho demo
+      JOBS_API_LOG_FORMAT: json        # container -> log JSON để observability đọc (Tuần 8)
+      JOBS_API_WAREHOUSE_BACKEND: duckdb
+      JOBS_API_DUCKDB_PATH: /data/analytics.duckdb
+      JOBS_API_CACHE_BACKEND: redis
+      JOBS_API_REDIS_URL: redis://redis:6379/0
+      JOBS_API_RATE_LIMITER_BACKEND: redis        # dùng RedisRateLimiter (§7) — đúng cho nhiều instance
+      JOBS_API_REQUEST_TIMEOUT_S: "20"            # < client 30s, > query timeout (§6)
+      JOBS_API_QUERY_TIMEOUT_S: "10"
+      # PROD: bỏ JOBS_API_ENV=local và ĐẶT JOBS_API_API_KEYS (JSON hash) qua Secret Manager.
+    volumes:
+      - duckdb_data:/data:ro           # API chỉ ĐỌC kho (khớp read_only=True ở adapter)
+    depends_on:
+      elt-init:
+        condition: service_completed_successfully   # kho phải tồn tại trước khi mở read_only
+      redis:
+        condition: service_healthy
+
+volumes:
+  mysql_data:    # dữ liệu MySQL, sống độc lập với container
+  duckdb_data:   # kho DuckDB do elt-init ghi, api đọc

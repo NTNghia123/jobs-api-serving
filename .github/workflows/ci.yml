@@ -1,0 +1,65 @@
+name: CI
+
+# Tuần 7: build → test trước, deploy (Cloud Run) để tuỳ chọn.
+on:
+  push:
+    branches: [main, develop, "feat/**", "integrate-**"]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"          # khớp Dockerfile (python:3.12-slim) & .venv cục bộ
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+
+      - name: Lint (ruff)                  # cổng CỨNG
+        run: ruff check app tests
+
+      - name: Typecheck (mypy) — advisory
+        # Còn 4 lỗi kiểu ở CODE CŨ (fake_jobs, build_silver, build_gold, cache/redis — xem §11
+        # báo cáo). Chạy để theo dõi, CHƯA chặn build; bật cổng cứng sau khi dọn nợ.
+        run: mypy app
+        continue-on-error: true
+
+      - name: Test (pytest)                # cổng CỨNG — testpaths=tests trong pyproject.toml
+        run: pytest
+
+      - name: Security audit (pip-audit) — advisory
+        # Quét lỗ hổng phụ thuộc. Advisory vì advisory upstream (dep bắc cầu) không do ta kiểm soát;
+        # xem log để xử lý, không để CI đỏ vì thứ ngoài tầm.
+        run: pip-audit --requirement requirements.txt
+        continue-on-error: true
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: quality                          # chỉ build image sau khi lint + test xanh
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t jobs-serving-api:ci .
+
+  # ---- deploy (TUỲ CHỌN) — Cloud Run ----
+  # Kế hoạch Tuần 7: Cloud Run là tuỳ chọn, không bắt buộc cho dự án học tập. Khi muốn lên cloud,
+  # bỏ comment khối dưới và đặt secrets GCP (WIF hoặc SA key), rồi deploy image non-root (ADR-014).
+  #
+  # deploy:
+  #   runs-on: ubuntu-latest
+  #   needs: docker
+  #   if: github.ref == 'refs/heads/main'
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: google-github-actions/auth@v2
+  #       with:
+  #         workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+  #         service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+  #     - uses: google-github-actions/deploy-cloudrun@v2
+  #       with:
+  #         service: jobs-serving-api
+  #         source: .
+  #         # secrets (JOBS_API_API_KEYS, PAGE_TOKEN_SECRET...) lấy từ Secret Manager,
+  #         # request timeout Cloud Run > query timeout (ADR-016), min-instances để giảm cold start.

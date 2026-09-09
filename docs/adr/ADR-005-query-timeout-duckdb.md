@@ -1,6 +1,7 @@
 # ADR-005: Tạm chưa cưỡng chế query timeout ở DuckDB cục bộ
 
-- Trạng thái: Đã chấp nhận
+- Trạng thái: **Bị thay thế bởi [ADR-016](ADR-016-query-timeout-enforced.md) (Tuần 7)** — query timeout
+  nay ĐÃ được cưỡng chế thật bằng thread + interrupt. Nội dung dưới giữ lại làm bối cảnh lịch sử.
 - Ngày: [Điền ngày — tuần 3]
 - Người quyết định: [Điền tên]
 

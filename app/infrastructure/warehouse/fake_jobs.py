@@ -5,13 +5,13 @@ mô phỏng hình dạng thật (công ty nước ngoài, lương số nguyên, 
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.domain.ports.job_repository import JobRepository, SearchResult
 from app.models.enums import Seniority, SortOption
 from app.models.jobs import JobItem, SearchRequest
 
-_AS_OF = datetime(2025, 8, 17, 0, 0, tzinfo=timezone.utc)
+_AS_OF = datetime(2025, 8, 17, 0, 0, tzinfo=UTC)
 
 
 def _seniority_from_years(y: int) -> Seniority:

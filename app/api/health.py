@@ -8,7 +8,7 @@ Readiness check (có gọi kho) sẽ tách riêng ở Tuần 7 nếu cần.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter
 
@@ -31,5 +31,5 @@ def health() -> HealthResponse:
         service=s.service_name,
         version=s.api_version,
         env=s.env,
-        checked_at=datetime.now(timezone.utc),
+        checked_at=datetime.now(UTC),
     )

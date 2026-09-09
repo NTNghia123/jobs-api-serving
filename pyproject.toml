@@ -1,0 +1,30 @@
+# Cấu hình công cụ chất lượng mã & test (Tuần 7).
+# Trước đây chưa có file này nên ruff/pytest chạy theo mặc định (bộ rule rộng bừa, và pytest
+# quét cả rác). Chốt bộ rule tường minh để CI tất định.
+
+[tool.pytest.ini_options]
+# CHỈ chạy test thật trong tests/ — không quét thư mục khác (đã từng có đáp án cũ gây vỡ collect).
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+# Mirror mặc định (E4/E7/E9 + F) rồi thêm: I=sắp xếp import, B=bugbear, UP=pyupgrade.
+# KHÔNG bật E5 (E501 độ dài dòng) vì nhiều dòng chú thích tiếng Việt dài có chủ đích.
+select = ["E4", "E7", "E9", "F", "I", "B", "UP"]
+# B008: gọi hàm trong default argument — nhưng Depends()/Header() của FastAPI là ĐÚNG idiom.
+# UP042: gợi ý đổi (str, Enum) -> StrEnum; str() của StrEnum khác nên bỏ, tránh đổi hành vi cũ.
+ignore = ["B008", "UP042"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test Redis phải importorskip TRƯỚC khi import module dùng redis → import không ở đầu file (E402 cố ý).
+"tests/test_ratelimit_redis.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true      # duckdb/pandas/redis... không kèm stubs — không coi là lỗi
+warn_unused_ignores = true
+warn_redundant_casts = true
+# Không bật strict: đây là dự án học, mục tiêu là bắt lỗi kiểu rõ ràng, không ép annotate 100%.

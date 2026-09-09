@@ -8,17 +8,17 @@ Caching qua interface CacheBackend (in-memory hoặc Redis, chọn bằng config
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import get_cache, get_metrics_repository
 from app.domain.ports.cache import CacheBackend
+from app.domain.ports.metrics_repository import MetricsRepository
 from app.domain.validator import QueryValidator
 from app.models.common import ErrorResponse
 from app.models.market import MarketMetricRow, MarketMetricsResponse
 from app.observability.logging import get_request_id, log_event
-from app.domain.ports.metrics_repository import MetricsRepository
 
 router = APIRouter(tags=["market"])
 logger = logging.getLogger("api.market")
@@ -64,7 +64,7 @@ def market_metrics(
         )
         for r in rows
     ]
-    as_of = rows[0].as_of if rows else datetime.now(timezone.utc)
+    as_of = rows[0].as_of if rows else datetime.now(UTC)
 
     resp = MarketMetricsResponse(
         dimension=dimension, items=items, as_of=as_of, request_id=get_request_id()

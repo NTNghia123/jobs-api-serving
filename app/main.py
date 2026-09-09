@@ -7,12 +7,12 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import Depends, FastAPI, Request        # ★ THÊM Depends (Tuần 6)
+from fastapi import Depends, FastAPI, Request  # ★ THÊM Depends (Tuần 6)
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api import health, jobs, market, metadata   # ★ THÊM 'market' (Tuần 5)
-from app.api.auth import require_client              # ★ THÊM Ở TUẦN 6
+from app.api import health, jobs, market, metadata  # ★ THÊM 'market' (Tuần 5)
+from app.api.auth import require_client  # ★ THÊM Ở TUẦN 6
 from app.errors import AppError
 from app.models.common import ErrorDetail, ErrorResponse
 from app.observability.logging import (

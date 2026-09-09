@@ -80,6 +80,32 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = Field(default=120, ge=1, description="Số request/phút mỗi client.")
     rate_limit_burst: int = Field(default=0, ge=0, description="Sức chứa burst; 0 = bằng per_minute.")
 
+    # ★ THÊM Ở TUẦN 7 — chọn adapter rate-limit: memory (1 instance) | redis (chia sẻ đa instance).
+    rate_limiter_backend: str = Field(default="memory", description="memory | redis")
+
+    # ★ THÊM Ở TUẦN 7 — ngân sách timeout LỒNG NHAU: client > request > query.
+    # Khai request_timeout_s TRƯỚC query_timeout_s để validator dưới thấy được nó qua info.data.
+    request_timeout_s: int = Field(
+        default=20, ge=1,
+        description="Ngân sách xử lý 1 request (giây). Đặt ở tầng edge/Cloud Run; phải < client timeout.",
+    )
+    query_timeout_s: int = Field(
+        default=10, ge=1,
+        description="Trần thời gian 1 truy vấn kho (giây). Cưỡng chế THẬT ở DuckDB adapter (interrupt).",
+    )
+
+    @field_validator("query_timeout_s")
+    @classmethod
+    def _query_must_nest_under_request(cls, v: int, info):
+        # Bất biến lồng nhau: query < request. Sai thứ tự -> KHÔNG boot (fail-fast).
+        req = (info.data or {}).get("request_timeout_s")
+        if req is not None and v >= req:
+            raise ValueError(
+                "JOBS_API_QUERY_TIMEOUT_S phải NHỎ HƠN JOBS_API_REQUEST_TIMEOUT_S "
+                "(ngân sách timeout phải lồng nhau: client > request > query)"
+            )
+        return v
+
     @field_validator("page_token_secret")
     @classmethod
     def _refuse_default_secret_outside_local(cls, v: str, info):

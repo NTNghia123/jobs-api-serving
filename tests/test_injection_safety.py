@@ -11,8 +11,8 @@ from __future__ import annotations
 import duckdb
 import pytest
 
-from app.models.jobs import SearchFilters, SearchRequest
 from app.infrastructure.warehouse.duckdb_jobs import DuckDBJobRepository
+from app.models.jobs import SearchFilters, SearchRequest
 
 
 @pytest.fixture

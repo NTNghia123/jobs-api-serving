@@ -17,12 +17,12 @@ from fastapi import APIRouter, Depends
 
 from app.api.deps import get_repository
 from app.domain.pagination import decode_page_token, encode_page_token, filters_fingerprint
-from app.domain.validator import QueryValidator          # ★ THÊM Ở TUẦN 4
+from app.domain.ports.job_repository import JobRepository
+from app.domain.validator import QueryValidator  # ★ THÊM Ở TUẦN 4
 from app.models.common import ErrorResponse
 from app.models.jobs import SearchRequest, SearchResponse
 from app.observability.logging import get_request_id, log_event
 from app.settings import get_settings
-from app.domain.ports.job_repository import JobRepository
 
 router = APIRouter(tags=["jobs"])
 logger = logging.getLogger("api.jobs")

@@ -8,7 +8,7 @@ Việc lấy record ở đâu là của port ApiKeyStore (adapter lo).
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.domain.ports.api_key_store import ApiKeyStore, ClientRecord
 from app.errors import UnauthorizedError
@@ -24,7 +24,7 @@ def authenticate(raw_key: str, store: ApiKeyStore, now: datetime | None = None) 
 
     Tiêm `now` để test hạn dùng bằng đồng hồ giả.
     """
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     record = store.lookup(hash_key(raw_key))     # so khớp hằng-thời-gian nằm trong store
     if record is None:
         raise UnauthorizedError("API key không hợp lệ")

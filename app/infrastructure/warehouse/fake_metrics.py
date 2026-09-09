@@ -5,11 +5,11 @@ Trước refactor: một phần của app/warehouse/metrics.py. country 'Andorra
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.domain.ports.metrics_repository import MetricRow, MetricsRepository
 
-_AS_OF = datetime(2025, 8, 17, 0, 0, tzinfo=timezone.utc)
+_AS_OF = datetime(2025, 8, 17, 0, 0, tzinfo=UTC)
 
 
 class FakeMetricsRepository(MetricsRepository):

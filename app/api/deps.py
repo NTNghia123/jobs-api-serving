@@ -18,17 +18,18 @@ from __future__ import annotations
 from functools import lru_cache
 
 # Ports (interface) — thuộc lõi
-from app.domain.ports.api_key_store import ApiKeyStore          # ★ THÊM Ở TUẦN 6
+from app.domain.ports.api_key_store import ApiKeyStore  # ★ THÊM Ở TUẦN 6
 from app.domain.ports.cache import CacheBackend
 from app.domain.ports.job_repository import JobRepository
 from app.domain.ports.metrics_repository import MetricsRepository
-from app.domain.ports.rate_limiter import RateLimiter          # ★ THÊM Ở TUẦN 6
+from app.domain.ports.rate_limiter import RateLimiter  # ★ THÊM Ở TUẦN 6
 
 # Adapters (implementation) — chỉ composition root này được import infrastructure
-from app.infrastructure.auth.config_key_store import ConfigApiKeyStore   # ★ THÊM Ở TUẦN 6
+from app.infrastructure.auth.config_key_store import ConfigApiKeyStore  # ★ THÊM Ở TUẦN 6
 from app.infrastructure.cache.memory import InMemoryCache
 from app.infrastructure.cache.redis import RedisCache
-from app.infrastructure.ratelimit.memory import InMemoryRateLimiter      # ★ THÊM Ở TUẦN 6
+from app.infrastructure.ratelimit.memory import InMemoryRateLimiter  # ★ THÊM Ở TUẦN 6
+from app.infrastructure.ratelimit.redis import RedisRateLimiter  # ★ THÊM Ở TUẦN 7
 from app.infrastructure.warehouse.duckdb_jobs import DuckDBJobRepository
 from app.infrastructure.warehouse.duckdb_metrics import DuckDBMetricsRepository
 from app.infrastructure.warehouse.fake_jobs import FakeJobRepository
@@ -41,7 +42,9 @@ def _build_repository(backend: str) -> JobRepository:
     if backend == "fake":
         return FakeJobRepository()
     if backend == "duckdb":                                  # ★ THÊM Ở TUẦN 3
-        return DuckDBJobRepository(path=get_settings().duckdb_path)
+        s = get_settings()
+        # ★ TUẦN 7: truyền trần thời gian truy vấn xuống adapter (cưỡng chế bằng interrupt).
+        return DuckDBJobRepository(path=s.duckdb_path, query_timeout_s=s.query_timeout_s)
     # Tuần 7 (tuỳ chọn):
     # if backend == "bigquery": return BigQueryJobRepository(...)
     raise RuntimeError(f"warehouse_backend chưa được hỗ trợ: {backend}")
@@ -57,7 +60,8 @@ def _build_metrics_repository(backend: str) -> MetricsRepository:
     if backend == "fake":
         return FakeMetricsRepository()
     if backend == "duckdb":
-        return DuckDBMetricsRepository(path=get_settings().duckdb_path)
+        s = get_settings()
+        return DuckDBMetricsRepository(path=s.duckdb_path, query_timeout_s=s.query_timeout_s)   # ★ TUẦN 7
     raise RuntimeError(f"warehouse_backend chưa được hỗ trợ: {backend}")
 
 
@@ -86,9 +90,16 @@ def get_api_key_store() -> ApiKeyStore:
     return ConfigApiKeyStore.from_settings(get_settings())
 
 
-# ★ THÊM Ở TUẦN 6 — rate limiter dùng chung (singleton nhờ lru_cache).
+# ★ THÊM Ở TUẦN 6, MỞ RỘNG TUẦN 7 — rate limiter dùng chung (singleton nhờ lru_cache).
+# Giữ NGUYÊN hàm này là @lru_cache (conftest gọi .cache_clear() giữa các test). Tuần 7 chỉ
+# thêm nhánh chọn adapter: memory (1 instance) | redis (chia sẻ đa instance) qua rate_limiter_backend.
 @lru_cache
 def get_rate_limiter() -> RateLimiter:
     s = get_settings()
     capacity = s.rate_limit_burst or s.rate_limit_per_minute
-    return InMemoryRateLimiter(rate_per_sec=s.rate_limit_per_minute / 60.0, capacity=capacity)
+    rate_per_sec = s.rate_limit_per_minute / 60.0
+    if s.rate_limiter_backend == "memory":
+        return InMemoryRateLimiter(rate_per_sec=rate_per_sec, capacity=capacity)
+    if s.rate_limiter_backend == "redis":                    # ★ THÊM Ở TUẦN 7
+        return RedisRateLimiter(s.redis_url, rate_per_sec=rate_per_sec, capacity=capacity)
+    raise RuntimeError(f"rate_limiter_backend chưa được hỗ trợ: {s.rate_limiter_backend}")

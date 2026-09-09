@@ -16,9 +16,9 @@ from __future__ import annotations
 import duckdb
 import pytest
 
+from app.infrastructure.warehouse.duckdb_jobs import DuckDBJobRepository
 from app.models.enums import Seniority, SortOption
 from app.models.jobs import SearchFilters, SearchRequest
-from app.infrastructure.warehouse.duckdb_jobs import DuckDBJobRepository
 
 # Cột an toàn của silver_jobs — KHÔNG được xuất hiện cột PII nào ngoài danh sách này.
 _SAFE_COLUMNS = {

@@ -11,12 +11,13 @@ API mở kho read_only=True: không thể ghi vào kho (least privilege ở tầ
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import duckdb
 
 from app.domain.ports.job_repository import JobRepository, SearchResult
+from app.infrastructure.warehouse._duckdb_timeout import execute_with_timeout  # ★ TUẦN 7
 from app.models.enums import SortOption
 from app.models.jobs import JobItem, SearchRequest
 
@@ -40,7 +41,7 @@ _SORT_TO_SQL: dict[SortOption, str] = {
 # sql/ nằm CẠNH file này (đã dời cùng nhau khi refactor) → đường dẫn tương đối vẫn đúng.
 _SQL_PATH = Path(__file__).parent / "sql" / "search_jobs.sql"
 
-_AS_OF = datetime(2025, 8, 17, 0, 0, tzinfo=timezone.utc)
+_AS_OF = datetime(2025, 8, 17, 0, 0, tzinfo=UTC)
 
 
 def _build_where(req: SearchRequest) -> tuple[str, dict]:
@@ -63,9 +64,10 @@ class DuckDBJobRepository(JobRepository):
     """Hiện thực JobRepository đọc từ file DuckDB. Handler không biết lớp này tồn tại —
     nó chỉ thấy interface JobRepository (nhờ Depends)."""
 
-    def __init__(self, path: str):
+    def __init__(self, path: str, query_timeout_s: int = 30):   # ★ TUẦN 7: trần thời gian truy vấn
         self._con = duckdb.connect(path, read_only=True)
         self._template = _SQL_PATH.read_text(encoding="utf-8")
+        self._timeout_s = query_timeout_s
 
     def as_of(self) -> datetime:
         return _AS_OF
@@ -76,10 +78,11 @@ class DuckDBJobRepository(JobRepository):
         # .format chỉ chèn where/order — cả hai ráp 100% từ allowlist, không từ user.
         sql = self._template.format(where=where, order=order)
         cur = self._con.cursor()                      # cursor riêng mỗi request (an toàn thread)
-        cur.execute(sql, params)                      # giá trị đi qua tham số
-        cols = [d[0] for d in cur.description]
+        # ★ TUẦN 7: chạy có trần thời gian — quá hạn thì interrupt + ném QueryTimeoutError (504).
+        desc, rows = execute_with_timeout(cur, sql, params, self._timeout_s)
+        cols = [d[0] for d in desc]
         # JobItem có extra='forbid' → nếu SELECT lỡ trả cột lạ (PII) thì Pydantic NÉM LỖI.
-        return [JobItem(**dict(zip(cols, row))) for row in cur.fetchall()]
+        return [JobItem(**dict(zip(cols, row, strict=True))) for row in rows]
 
     def _sort_key(self, req: SearchRequest):
         if req.sort == SortOption.SALARY_MIN_ASC:

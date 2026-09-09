@@ -4,11 +4,12 @@ Trước refactor: một phần của app/warehouse/metrics.py. Xem docs/adr/ADR
 """
 from __future__ import annotations
 
-from datetime import timezone
+from datetime import UTC
 
 import duckdb
 
 from app.domain.ports.metrics_repository import MetricRow, MetricsRepository
+from app.infrastructure.warehouse._duckdb_timeout import execute_with_timeout  # ★ TUẦN 7
 
 
 class DuckDBMetricsRepository(MetricsRepository):
@@ -19,16 +20,18 @@ class DuckDBMetricsRepository(MetricsRepository):
         "ORDER BY dimension_value"
     )
 
-    def __init__(self, path: str):
+    def __init__(self, path: str, query_timeout_s: int = 30):   # ★ TUẦN 7: trần thời gian truy vấn
         self._con = duckdb.connect(path, read_only=True)   # API chỉ đọc kho
+        self._timeout_s = query_timeout_s
 
     def market_metrics(self, dimension: str) -> list[MetricRow]:
         cur = self._con.cursor()
-        cur.execute(self._SQL, {"dimension": dimension})   # tham số hoá, chống injection
+        # ★ TUẦN 7: chạy có trần thời gian (interrupt khi quá hạn -> QueryTimeoutError 504).
+        _desc, fetched = execute_with_timeout(cur, self._SQL, {"dimension": dimension}, self._timeout_s)
         rows = []
-        for dv, ms, pc, ao in cur.fetchall():
+        for dv, ms, pc, ao in fetched:
             # gold lưu as_of dạng naive; gắn UTC để response nhất quán với các endpoint khác.
             if ao is not None and ao.tzinfo is None:
-                ao = ao.replace(tzinfo=timezone.utc)
+                ao = ao.replace(tzinfo=UTC)
             rows.append(MetricRow(dv, ms, pc, ao))
         return rows

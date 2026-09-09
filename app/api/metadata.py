@@ -17,10 +17,10 @@ from app.domain.catalog import (
     METRICS,
     SORT_OPTIONS,
 )
+from app.domain.ports.job_repository import JobRepository
 from app.models.metadata import FilterInfo, LimitsInfo, MetadataResponse, MetricInfo
 from app.observability.logging import get_request_id
 from app.settings import get_settings
-from app.domain.ports.job_repository import JobRepository
 
 router = APIRouter(tags=["discovery"])
 

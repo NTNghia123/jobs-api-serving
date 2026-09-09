@@ -1,0 +1,23 @@
+# Giữ build context gọn và không đưa bí mật/dữ liệu vào image.
+.git
+.gitignore
+.venv
+venv
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Bí mật & dữ liệu — KHÔNG bao giờ bake vào image
+.env
+*.duckdb
+
+# Tài liệu, test, báo cáo — không cần trong image runtime
+Report/
+docs/
+tests/
+examples/
+.github/
+*.md
+*.pdf
+Makefile
