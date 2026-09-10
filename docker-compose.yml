@@ -19,10 +19,26 @@ services:
       - ./scripts/init-reader-user.sql:/docker-entrypoint-initdb.d/init-reader-user.sql:ro
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpw"]
+      # DÙNG 127.0.0.1 (TCP), KHÔNG dùng 'localhost' (socket). Khi mysql init lần đầu, nó chạy một
+      # temporary server CHỈ nghe qua socket để nạp *.sql — ping qua socket sẽ "xanh giả" quá sớm,
+      # khiến elt-init chạy trước rồi nối TCP mysql:3306 bị refused. Ép TCP 127.0.0.1 để chỉ xanh
+      # khi server THẬT đã mở cổng 3306.
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "127.0.0.1",
+          "-P",
+          "3306",
+          "-uroot",
+          "-prootpw",
+        ]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 15
+      start_period: 30s # dành thời gian cho lần init đầu (nạp database.sql) trước khi tính retries
     # Không publish cổng ra host: API nói chuyện với MySQL trong mạng nội bộ của compose.
 
   # ---------- Cache + rate-limit chia sẻ ----------
@@ -41,38 +57,38 @@ services:
     build: .
     command: sh -c "python -m app.elt.build_silver && python -m app.elt.build_gold"
     environment:
-      JOBS_API_MYSQL_URL: mysql+pymysql://reader:reader_pw@mysql:3306/jobportal   # user CHỈ-ĐỌC
+      JOBS_API_MYSQL_URL: mysql+pymysql://reader:reader_pw@mysql:3306/jobportal # user CHỈ-ĐỌC
       JOBS_API_DUCKDB_PATH: /data/analytics.duckdb
     volumes:
       - duckdb_data:/data
     depends_on:
       mysql:
-        condition: service_healthy   # đợi MySQL THẬT SỰ sẵn sàng, không chỉ 'đã khởi động'
+        condition: service_healthy # đợi MySQL THẬT SỰ sẵn sàng, không chỉ 'đã khởi động'
 
   # ---------- Tầng phục vụ ----------
   api:
     build: .
     ports:
-      - "8080:8080"
+      - "8082:8080"
     environment:
-      JOBS_API_ENV: local              # local: tự seed key dev 'dev-local-key-team-ai' cho demo
-      JOBS_API_LOG_FORMAT: json        # container -> log JSON để observability đọc (Tuần 8)
+      JOBS_API_ENV: local # local: tự seed key dev 'dev-local-key-team-ai' cho demo
+      JOBS_API_LOG_FORMAT: json # container -> log JSON để observability đọc (Tuần 8)
       JOBS_API_WAREHOUSE_BACKEND: duckdb
       JOBS_API_DUCKDB_PATH: /data/analytics.duckdb
       JOBS_API_CACHE_BACKEND: redis
       JOBS_API_REDIS_URL: redis://redis:6379/0
-      JOBS_API_RATE_LIMITER_BACKEND: redis        # dùng RedisRateLimiter (§7) — đúng cho nhiều instance
-      JOBS_API_REQUEST_TIMEOUT_S: "20"            # < client 30s, > query timeout (§6)
+      JOBS_API_RATE_LIMITER_BACKEND: redis # dùng RedisRateLimiter (§7) — đúng cho nhiều instance
+      JOBS_API_REQUEST_TIMEOUT_S: "20" # < client 30s, > query timeout (§6)
       JOBS_API_QUERY_TIMEOUT_S: "10"
       # PROD: bỏ JOBS_API_ENV=local và ĐẶT JOBS_API_API_KEYS (JSON hash) qua Secret Manager.
     volumes:
-      - duckdb_data:/data:ro           # API chỉ ĐỌC kho (khớp read_only=True ở adapter)
+      - duckdb_data:/data:ro # API chỉ ĐỌC kho (khớp read_only=True ở adapter)
     depends_on:
       elt-init:
-        condition: service_completed_successfully   # kho phải tồn tại trước khi mở read_only
+        condition: service_completed_successfully # kho phải tồn tại trước khi mở read_only
       redis:
         condition: service_healthy
 
 volumes:
-  mysql_data:    # dữ liệu MySQL, sống độc lập với container
-  duckdb_data:   # kho DuckDB do elt-init ghi, api đọc
+  mysql_data: # dữ liệu MySQL, sống độc lập với container
+  duckdb_data: # kho DuckDB do elt-init ghi, api đọc
