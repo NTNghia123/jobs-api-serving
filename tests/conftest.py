@@ -1,24 +1,36 @@
+"""Cấu hình test dùng chung.
+
+Ép backend HERMETIC cho test: warehouse=fake, cache/rate-limit=memory — không phụ thuộc
+.env (duckdb/redis) hay file analytics.duckdb. Contract test chạy trên `fake`; parity
+duckdb/bigquery ở Phase 4.
+"""
+import os
+
+# Phải set TRƯỚC khi app đọc settings (pydantic-settings: env var > .env).
+os.environ["JOBS_API_WAREHOUSE_BACKEND"] = "fake"
+os.environ["JOBS_API_CACHE_BACKEND"] = "memory"
+os.environ["JOBS_API_RATE_LIMITER_BACKEND"] = "memory"
+os.environ["JOBS_API_ENV"] = "local"
+
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.deps import get_api_key_store, get_rate_limiter  # ★ THÊM Ở TUẦN 6
-from app.infrastructure.auth.config_key_store import DEV_API_KEY  # ★ THÊM Ở TUẦN 6
+from app.api.deps import get_api_key_store, get_rate_limiter
+from app.infrastructure.auth.config_key_store import DEV_API_KEY
 from app.main import create_app
+from app.settings import get_settings
+
+get_settings.cache_clear()   # bỏ cache nếu settings đã bị đọc lúc import
 
 
 @pytest.fixture(scope="session")
 def client() -> TestClient:
-    # ★ Tuần 6: gắn sẵn key dev cho MỌI request → test cũ không phải đổi từng file.
     return TestClient(create_app(), headers={"X-API-Key": DEV_API_KEY})
 
 
 @pytest.fixture(autouse=True)
 def _reset_auth_state():
-    """★ Tuần 6: xoá state token bucket + store giữa các test.
-
-    get_rate_limiter/get_api_key_store dùng @lru_cache (singleton) → state tích luỹ
-    qua các test, dễ gây 429 chéo nhau. cache_clear() để mỗi test bắt đầu sạch.
-    """
+    """Xoá state token bucket + store giữa các test (tránh 429 chéo)."""
     get_rate_limiter.cache_clear()
     get_api_key_store.cache_clear()
     yield
@@ -26,5 +38,5 @@ def _reset_auth_state():
 
 @pytest.fixture
 def base_body() -> dict:
-    """Request hợp lệ tối thiểu — không còn field bắt buộc nào."""
-    return {"limit": 5}
+    """Request hợp lệ tối thiểu — posted_after BẮT BUỘC (lấy đủ xa để phủ toàn corpus mẫu)."""
+    return {"filters": {"posted_after": "2020-01-01"}, "limit": 5}

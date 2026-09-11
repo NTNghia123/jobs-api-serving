@@ -12,6 +12,9 @@ from functools import lru_cache
 from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Backend kho khả dụng theo giai đoạn migration. Phase 3 thêm 'bigquery'; Phase 4 thêm 'duckdb'.
+_AVAILABLE_BACKENDS: frozenset[str] = frozenset({"fake"})
+
 
 # ★ THÊM Ở TUẦN 6 — một bản ghi key: server CHỈ lưu hash + hạn dùng, không lưu key thô.
 class ApiKeyEntry(BaseModel):
@@ -45,8 +48,8 @@ class Settings(BaseSettings):
         description="Khoá HMAC ký page_token. PROD phải lấy từ Secret Manager.",
     )
 
-    # --- backend kho dữ liệu ---
-    warehouse_backend: str = Field(default="fake", description="fake | duckdb | bigquery")
+    # --- backend kho dữ liệu --- (migration: chỉ 'fake' khả dụng; bigquery→Phase 3, duckdb→Phase 4)
+    warehouse_backend: str = Field(default="fake", description="fake (Phase 0) | bigquery (Phase 3) | duckdb (Phase 4)")
 
     # ★ THÊM Ở TUẦN 3 — đường dẫn file kho DuckDB (API đọc từ đây, read-only).
     duckdb_path: str = Field(
@@ -83,6 +86,12 @@ class Settings(BaseSettings):
     # ★ THÊM Ở TUẦN 7 — chọn adapter rate-limit: memory (1 instance) | redis (chia sẻ đa instance).
     rate_limiter_backend: str = Field(default="memory", description="memory | redis")
 
+    # ★ MIGRATION (BigQuery) — ngưỡng k-anonymity cho median lương ở /market/metrics.
+    metrics_min_sample_size: int = Field(
+        default=5, ge=1,
+        description="median_salary_vnd_month = null khi salary_sample_count < ngưỡng này.",
+    )
+
     # ★ THÊM Ở TUẦN 7 — ngân sách timeout LỒNG NHAU: client > request > query.
     # Khai request_timeout_s TRƯỚC query_timeout_s để validator dưới thấy được nó qua info.data.
     request_timeout_s: int = Field(
@@ -105,6 +114,19 @@ class Settings(BaseSettings):
                 "(ngân sách timeout phải lồng nhau: client > request > query)"
             )
         return v
+
+    @field_validator("warehouse_backend")
+    @classmethod
+    def _backend_available(cls, v: str):
+        # FAIL-FAST ở boot cho MỌI backend chưa khả dụng (tránh boot-rồi-500 lúc request).
+        # Migration mở dần: Phase 0 chỉ 'fake'; 'bigquery' bật ở Phase 3; 'duckdb' khôi phục Phase 4.
+        if v in _AVAILABLE_BACKENDS:
+            return v
+        msg = {
+            "duckdb": "warehouse_backend='duckdb' TẠM tắt trong migration — khôi phục ở Phase 4.",
+            "bigquery": "warehouse_backend='bigquery' CHƯA khả dụng — sẽ có ở Phase 3.",
+        }.get(v, f"warehouse_backend='{v}' không hỗ trợ.")
+        raise ValueError(f"{msg} Hiện chỉ dùng được 'fake' (migration Phase 0).")
 
     @field_validator("page_token_secret")
     @classmethod

@@ -11,11 +11,13 @@ from fastapi import APIRouter, Depends
 from app.api.deps import get_repository
 from app.domain.catalog import (
     DEFAULT_LIMIT,
+    DIMENSIONS,
     FILTERS,
     MAX_EXPERIENCE_YEARS,
     MAX_LIMIT,
     METRICS,
     SORT_OPTIONS,
+    WINDOWS,
 )
 from app.domain.ports.job_repository import JobRepository
 from app.models.metadata import FilterInfo, LimitsInfo, MetadataResponse, MetricInfo
@@ -37,6 +39,9 @@ def metadata(repo: JobRepository = Depends(get_repository)) -> MetadataResponse:
         as_of=repo.as_of(),
         filters=[FilterInfo(**f.__dict__) for f in FILTERS],
         metrics=[MetricInfo(**m.__dict__) for m in METRICS],
+        dimensions=list(DIMENSIONS),
+        windows=list(WINDOWS),
+        metrics_min_sample_size=get_settings().metrics_min_sample_size,
         sort_options=list(SORT_OPTIONS),
         limits=LimitsInfo(
             default_limit=DEFAULT_LIMIT,

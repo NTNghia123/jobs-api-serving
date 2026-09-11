@@ -1,31 +1,45 @@
-"""Hợp đồng của /v1/jobs/search — căn chỉnh theo schema thật.
+"""Hợp đồng của /v1/jobs/search — căn theo dữ liệu THẬT (Mongo → BigQuery).
 
-Nguồn: job_post JOIN company (fulfilen/job-portal).
-Quyết định bám dữ liệu thật:
-  - Bỏ posted_after: mọi tin cùng ngày 2017-10-10 nên "filter ngày" vô nghĩa.
-  - seniority là giá trị SUY RA (không có sẵn), enum 3 mức.
-  - country thay cho city: địa điểm chỉ ở company, là quốc gia.
-  - Không có job_function / employment_type / work_mode / skills → không đưa vào.
-  - Lương là số nguyên KHÔNG đơn vị tiền tệ → không đặt tên salary_*_vnd.
-  - JobItem không chứa PII (email, password, dob, contactno) — ràng buộc thiết kế.
+Xem docs/adr/ADR-019 (mapping), ADR-020 (serving), ADR-024 (salary).
+Nguyên tắc: JobItem KHÔNG chứa raw payload / contact / session; text lớn
+(description/benefit) và skills để [SAU] ở silver_job_details.
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.domain.catalog import DEFAULT_LIMIT, MAX_EXPERIENCE_YEARS, MAX_LIMIT
-from app.models.enums import Seniority, SortOption
+from app.domain.catalog import (
+    DEFAULT_LIMIT,
+    MAX_EXPERIENCE_YEARS,
+    MAX_LIMIT,
+    MAX_SALARY_VND_MONTH,
+)
+from app.models.enums import JobSource, Seniority, SortOption
 
 
 class SearchFilters(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    # posted_after BẮT BUỘC (ADR-020) → đảm bảo partition prune, không quét cả kho.
+    posted_after: date = Field(description="ISO date, bắt buộc. effective_posted_date >= giá trị.")
+    posted_before: date | None = Field(default=None, description="ISO date. effective_posted_date <= giá trị.")
+    source: JobSource | None = None
     seniority: Seniority | None = None
+    category: str | None = Field(default=None, max_length=120, description="category_key '<source>:<group-path>'.")
+    salary_min: int | None = Field(default=None, ge=0, le=MAX_SALARY_VND_MONTH, description="VND/tháng.")
     experience_max: int | None = Field(default=None, ge=0, le=MAX_EXPERIENCE_YEARS)
-    salary_min: int | None = Field(default=None, ge=0, le=1_000_000_000)
-    country: str | None = Field(default=None, max_length=100)
+
+    @field_validator("posted_before")
+    @classmethod
+    def _range_not_inverted(cls, v, info):
+        # posted_after khai TRƯỚC nên đã có trong info.data → chặn khoảng ngày đảo ngược
+        # ngay ở biên (400 filters.posted_before) thay vì trả danh sách rỗng khó hiểu.
+        after = (info.data or {}).get("posted_after")
+        if v is not None and after is not None and v < after:
+            raise ValueError("posted_before phải >= posted_after")
+        return v
 
     def active_names(self) -> list[str]:
         """Tên các filter đang dùng — cho log (KHÔNG log giá trị)."""
@@ -37,49 +51,70 @@ class SearchRequest(BaseModel):
         extra="forbid",
         json_schema_extra={
             "example": {
-                "filters": {"seniority": "mid", "salary_min": 30000, "country": "Bulgaria"},
+                "filters": {
+                    "posted_after": "2026-06-01",
+                    "seniority": "senior",
+                    "salary_min": 30000000,
+                },
                 "sort": "salary_max_desc",
                 "limit": 20,
             }
         },
     )
 
-    filters: SearchFilters = Field(default_factory=SearchFilters)
+    # filters BẮT BUỘC (posted_after bắt buộc) → không còn default_factory.
+    filters: SearchFilters
     sort: SortOption = SortOption.SALARY_MAX_DESC
     limit: int = Field(default=DEFAULT_LIMIT, ge=1, le=MAX_LIMIT)
     page_token: str | None = Field(
         default=None,
-        description="Chuỗi mờ lấy từ next_page_token của response trước. Không tự tạo.",
+        description="Chuỗi mờ (gắn batch) lấy từ next_page_token của response trước. Không tự tạo/sửa.",
     )
 
 
-class JobItem(BaseModel):
-    """Một tin tuyển dụng. Mọi trường ở đây đều an toàn (không PII)."""
+class CategoryItem(BaseModel):
+    """Một category của job (repeated). Key source-qualified theo group-path."""
 
     model_config = ConfigDict(extra="forbid")
 
-    job_id: int
-    title: str                      # job_post.jobtitle
-    company_name: str               # company.companyname
-    country: str | None = None      # company.country (qua JOIN)
-    seniority: Seniority            # suy ra từ years_exp
-    years_exp: int                  # job_post.experience (đã CAST)
-    salary_min: int | None = None   # job_post.minimumsalary (đã CAST)
-    salary_max: int | None = None   # job_post.maximumsalary (đã CAST)
-    qualification: str | None = None
-    url: str
+    category_key: str          # '<source>:<group-path>', vd 'topdev:g14~j22'
+    category_name: str
+    category_path: str | None = None   # group-path, vd 'g14~j22'
+
+
+class JobItem(BaseModel):
+    """Một job. Không PII, không raw/text-lớn (serving-lean)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    job_id: str                              # composite '<source>:<external_id>'
+    source: JobSource
+    external_id: str
+    title: str
+    company_name: str | None = None
+    location_text: str | None = None
+    seniority: Seniority                     # đã chuẩn hoá (có thể 'unknown')
+    experience_min_years: float | None = None
+    experience_max_years: float | None = None
+    salary_min_vnd_month: int | None = None  # null khi thoả thuận / thiếu cận
+    salary_max_vnd_month: int | None = None
+    salary_currency: str | None = None       # tiền tệ gốc (VND/USD) — thông tin
+    salary_period: str | None = None         # 'month'
+    categories: list[CategoryItem] = Field(default_factory=list)
+    posted_at: datetime | None = None
+    effective_posted_date: date              # luôn có (COALESCE, ADR-019)
+    deadline_date: date | None = None
+    url: str                                 # source_url
 
 
 class SearchResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     items: list[JobItem]
-    next_page_token: str | None = Field(
-        default=None, description="null nghĩa là đã hết dữ liệu."
-    )
+    next_page_token: str | None = Field(default=None, description="null nghĩa là đã hết dữ liệu.")
     total_estimated: int | None = Field(
         default=None,
-        description="ƯỚC LƯỢNG, không đảm bảo chính xác. Đừng dùng để phân trang.",
+        description="Thường null trên BigQuery (không COUNT(*) mỗi request). Đừng dùng để phân trang.",
     )
-    as_of: datetime = Field(description="Thời điểm chạy ELT gần nhất (độ tươi dữ liệu).")
+    as_of: datetime = Field(description="data cutoff của batch đang phục vụ (ADR-025).")
     request_id: str

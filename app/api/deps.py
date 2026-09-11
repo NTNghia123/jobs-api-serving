@@ -1,9 +1,9 @@
 """Dependency injection.
 
 [FILE SỬA]  Đích thật: app/api/deps.py
-So với bản Tuần 2, chỉ THÊM 1 import + 1 nhánh 'duckdb' (đánh dấu ★). CHỖ DUY NHẤT
-trong code cũ phải sửa để đổi từ dữ liệu giả sang dữ liệu thật — app/api/jobs.py,
-app/models/, app/domain/ KHÔNG đổi. Đó là phép thử của adapter pattern (ADR-003).
+Composition root: chỗ DUY NHẤT ráp adapter cho các port. Migration Phase 0: chỉ backend
+'fake' khả dụng; 'bigquery' (Phase 3) / 'duckdb' (Phase 4) bị từ chối fail-fast ở settings
+(và nhánh phòng thủ dưới đây). Handler/models/domain không phụ thuộc adapter cụ thể (ADR-003/018).
 
 FastAPI's Depends cho phép đổi hiện thực mà không sửa handler.
 
@@ -30,23 +30,24 @@ from app.infrastructure.cache.memory import InMemoryCache
 from app.infrastructure.cache.redis import RedisCache
 from app.infrastructure.ratelimit.memory import InMemoryRateLimiter  # ★ THÊM Ở TUẦN 6
 from app.infrastructure.ratelimit.redis import RedisRateLimiter  # ★ THÊM Ở TUẦN 7
-from app.infrastructure.warehouse.duckdb_jobs import DuckDBJobRepository
-from app.infrastructure.warehouse.duckdb_metrics import DuckDBMetricsRepository
 from app.infrastructure.warehouse.fake_jobs import FakeJobRepository
 from app.infrastructure.warehouse.fake_metrics import FakeMetricsRepository
 from app.settings import get_settings
+
+# DuckDB tạm tắt trong migration (schema silver đổi sang BigQuery). Phase 4 khôi phục parity.
+_DUCKDB_DISABLED = (
+    "warehouse_backend='duckdb' tạm không hỗ trợ trong migration; dùng 'fake' "
+    "('bigquery' khả dụng ở Phase 3, 'duckdb' khôi phục ở Phase 4)."
+)
 
 
 @lru_cache
 def _build_repository(backend: str) -> JobRepository:
     if backend == "fake":
         return FakeJobRepository()
-    if backend == "duckdb":                                  # ★ THÊM Ở TUẦN 3
-        s = get_settings()
-        # ★ TUẦN 7: truyền trần thời gian truy vấn xuống adapter (cưỡng chế bằng interrupt).
-        return DuckDBJobRepository(path=s.duckdb_path, query_timeout_s=s.query_timeout_s)
-    # Tuần 7 (tuỳ chọn):
-    # if backend == "bigquery": return BigQueryJobRepository(...)
+    if backend == "duckdb":                                  # ★ TẠM TẮT trong migration (Phase 4 khôi phục)
+        raise RuntimeError(_DUCKDB_DISABLED)
+    # Phase 3: if backend == "bigquery": return BigQueryJobRepository(...)
     raise RuntimeError(f"warehouse_backend chưa được hỗ trợ: {backend}")
 
 
@@ -60,8 +61,7 @@ def _build_metrics_repository(backend: str) -> MetricsRepository:
     if backend == "fake":
         return FakeMetricsRepository()
     if backend == "duckdb":
-        s = get_settings()
-        return DuckDBMetricsRepository(path=s.duckdb_path, query_timeout_s=s.query_timeout_s)   # ★ TUẦN 7
+        raise RuntimeError(_DUCKDB_DISABLED)   # ★ TẠM TẮT trong migration (Phase 4 khôi phục)
     raise RuntimeError(f"warehouse_backend chưa được hỗ trợ: {backend}")
 
 

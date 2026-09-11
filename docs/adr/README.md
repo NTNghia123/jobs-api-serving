@@ -51,7 +51,15 @@ bối cảnh, phương án đã chọn, các phương án bị loại, và hệ 
 | [ADR-015](ADR-015-docker-compose-topology.md) | Topology docker-compose: thứ tự khởi động + kho dùng chung | 7 | Đã chấp nhận |
 | [ADR-016](ADR-016-query-timeout-enforced.md) | Cưỡng chế query timeout ở DuckDB (thread + interrupt) | 7 | Đã chấp nhận |
 | [ADR-017](ADR-017-redis-rate-limiter-lua.md) | RedisRateLimiter token bucket nguyên tử bằng Lua | 7 | Đã chấp nhận |
+| [ADR-018](ADR-018-bigquery-warehouse.md) | Kho = BigQuery (prod) · DuckDB dev (tạm tắt) · fake test | Migration | Đã chấp nhận |
+| [ADR-019](ADR-019-mongo-source-data-contract.md) | Nguồn MongoDB & data contract (schema mapping matrix) | Migration | Đã chấp nhận |
+| ADR-020 · BigQuery serving | keyset, window neo as_of, count defs, cursor 400/410, category EXISTS | Migration | **Kế hoạch (chưa tạo)** |
+| ADR-021 · Dagster ownership | Plan A wrapper, CAS+lock+idempotent+bootstrap | Migration | **Kế hoạch (chưa tạo)** |
+| ADR-022 · Deployment | Cloud Run + WIF, SA tách môi trường, staging/prod | Migration | **Kế hoạch (chưa tạo)** |
+| ADR-023 · Session mgmt | storage-state là secret, refresh thủ công | Migration | **Kế hoạch (chưa tạo)** |
+| ADR-024 · Salary normalization | FX 25.500, VND theo triệu, one-sided, period scope | Migration | **Kế hoạch (chưa tạo)** |
+| ADR-025 · Atomic publication | warehouse_state + warehouse_batches, transaction, rollback | Migration | **Kế hoạch (chưa tạo)** |
+| ADR-026 · Pagination snapshot | page token gắn batch, 410 expired, cache key gắn batch | Migration | **Kế hoạch (chưa tạo)** |
 
-> Chỉ mục xếp theo tuần ra quyết định (số ADR chỉ là thứ tự tạo file, không cần liên tục theo tuần).
-> Còn để dành cho các tuần sau: Cloud Run concurrency/cost + BigQuery dry-run/max_bytes_billed;
-> OpenTelemetry tracing + handoff (Tuần 8).
+> Chỉ mục xếp theo tuần/giai đoạn ra quyết định. ADR-020..026 được tham chiếu trong plan/ADR khác nhưng
+> **chưa tạo file** — sẽ viết ở đúng phase migration tương ứng.

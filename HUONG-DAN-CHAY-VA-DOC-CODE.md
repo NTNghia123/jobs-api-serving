@@ -1,3 +1,9 @@
+> # ⚠️ TÀI LIỆU LEGACY (W3–W6) — KHÔNG áp dụng cho migration hiện tại
+> Nội dung dưới đây mô tả contract CŨ (DuckDB backend, filter `country`, không có `posted_after`,
+> các test đã bị xoá, "60 passed"…) và **sẽ không chạy đúng** với code hiện tại (migration Mongo → BigQuery,
+> chỉ backend `fake` khả dụng ở Phase 0). Xem `README.md` + `docs/migration-mongo-bigquery-plan.md` để biết
+> contract & cách chạy hiện hành.
+
 # Bản hoàn thiện tới hết Tuần 4 — Hướng dẫn chạy & đọc code
 
 > Đây là **bản clone đã implement sẵn Tuần 3 + Tuần 4** để bạn chạy và đọc-hiểu ngay tối nay.

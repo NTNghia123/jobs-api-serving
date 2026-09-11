@@ -17,7 +17,9 @@ def test_health_khong_can_key(client):
 
 
 def test_thieu_key_bi_401(client):
-    r = client.post("/v1/jobs/search", json={"limit": 5}, headers={"X-API-Key": ""})
+    r = client.post("/v1/jobs/search",
+                    json={"filters": {"posted_after": "2020-01-01"}, "limit": 5},
+                    headers={"X-API-Key": ""})
     assert r.status_code == 401
     assert r.json()["error"]["code"] == "UNAUTHORIZED"
 

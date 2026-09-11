@@ -1,76 +1,98 @@
-"""/v1/market/metrics — benchmark lương theo cấp bậc / quốc gia (Tuần 5).
+"""/v1/market/metrics — benchmark lương theo source | seniority | category.
 
-Đây là chỗ lớp QueryValidator của Tuần 4 phát huy giá trị THẬT:
-  - validate_dimension(): chỉ nhận seniority|country (allowlist).
-  - suppress_if_small(): che median của nhóm quá nhỏ (k-anonymity).
-Caching qua interface CacheBackend (in-memory hoặc Redis, chọn bằng config — ADR-009).
+Đọc gold đã tổng hợp sẵn. k-anonymity dựa trên salary_sample_count (ADR-020).
+window 90d neo theo as_of_date của batch (data cutoff). Cache key gắn batch+env+window+
+dimension để publish batch mới không trả cache cũ (ADR-026). Xem docs/adr/ADR-020, ADR-026.
 """
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import timedelta, timezone
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 
 from app.api.deps import get_cache, get_metrics_repository
 from app.domain.ports.cache import CacheBackend
 from app.domain.ports.metrics_repository import MetricsRepository
 from app.domain.validator import QueryValidator
 from app.models.common import ErrorResponse
+from app.models.enums import MetricDimension, MetricWindow
 from app.models.market import MarketMetricRow, MarketMetricsResponse
 from app.observability.logging import get_request_id, log_event
+from app.settings import get_settings
 
 router = APIRouter(tags=["market"])
 logger = logging.getLogger("api.market")
-
 validator = QueryValidator()      # stateless, dùng chung
+
+_VN_TZ = timezone(timedelta(hours=7))   # Asia/Ho_Chi_Minh: UTC+7 cố định (không DST) — khỏi cần tzdata
+
+
+def _display_name(value: str) -> str | None:
+    return "Unknown" if value == "unknown" or value.endswith(":unknown") else None
 
 
 @router.get(
     "/market/metrics",
     response_model=MarketMetricsResponse,
-    summary="Chỉ số lương theo cấp bậc hoặc quốc gia",
+    summary="Chỉ số lương theo source | seniority | category",
     description=(
-        "Đọc từ gold table đã tổng hợp sẵn (nhanh). Nhóm nhỏ hơn ngưỡng k-anonymity "
-        "sẽ có median_salary = null. Đơn vị lương không xác định trong nguồn."
+        "Đọc từ gold đã tổng hợp sẵn. median_salary_vnd_month = null khi salary_sample_count "
+        "< ngưỡng k-anonymity. window: 90d (neo theo as_of_date) hoặc all_time. Đơn vị VND/tháng."
     ),
     operation_id="getMarketMetrics",
-    responses={400: {"model": ErrorResponse, "description": "dimension không hợp lệ"}},
+    responses={400: {"model": ErrorResponse, "description": "dimension/window không hợp lệ"}},
 )
 def market_metrics(
-    dimension: str = Query("seniority", description="seniority | country"),
+    dimension: MetricDimension = MetricDimension.SENIORITY,
+    window: MetricWindow = MetricWindow.D90,
     repo: MetricsRepository = Depends(get_metrics_repository),
     cache: CacheBackend = Depends(get_cache),
 ) -> MarketMetricsResponse:
-    # 1) CỔNG KIỂM SOÁT: chỉ nhận dimension trong allowlist (W4).
-    validator.validate_dimension(dimension)
+    settings = get_settings()
+    dim, win = dimension.value, window.value
+    validator.validate_dimension(dim)   # phòng thủ theo chiều sâu (Pydantic enum đã chặn ở biên)
 
-    # 2) CACHE: cache lưu CHUỖI JSON → parse lại thành model khi hit.
-    cache_key = f"metrics:{dimension}"
+    # data cutoff của batch → neo cửa sổ 90d theo as_of_date (giờ VN, tránh lệch ngày).
+    as_of = repo.as_of()
+    as_of_date = as_of.astimezone(_VN_TZ).date()
+    if win == MetricWindow.D90.value:
+        window_end, window_start = as_of_date, as_of_date - timedelta(days=89)
+    else:
+        window_end = window_start = None
+
+    # Cache key: env + <mốc batch> + window + dimension. TẠM dùng as_of_date làm surrogate cho
+    # batch_id (fake một-batch). Phase 3/BigQuery: repo trả batch_id + data_as_of_at thật, thay
+    # as_of_date bằng batch_id (hai batch cùng ngày sẽ collision nếu vẫn dùng as_of_date) — ADR-026.
+    cache_key = f"{settings.env}:metrics:v1:{as_of_date.isoformat()}:{win}:{dim}"
     cached = cache.get(cache_key)
     if cached is not None:
         resp = MarketMetricsResponse.model_validate_json(cached)
-        log_event(logger, logging.INFO, "market_metrics", dimension=dimension, cache="hit")
-        # Dữ liệu tái dùng, nhưng request_id phải là của REQUEST HIỆN TẠI (không lấy id cũ).
+        log_event(logger, logging.INFO, "market_metrics", dimension=dim, window=win, cache="hit")
         return resp.model_copy(update={"request_id": get_request_id()})
 
-    # 3) Đọc gold (đã nướng sẵn) rồi ÁP k-anonymity từng nhóm.
-    rows = repo.market_metrics(dimension)
+    rows = repo.market_metrics(dim, win)
     items = [
         MarketMetricRow(
             dimension_value=r.dimension_value,
-            median_salary=validator.suppress_if_small(r.posting_count, r.median_salary),
+            display_name=_display_name(r.dimension_value),
             posting_count=r.posting_count,
+            salary_disclosed_count=r.salary_disclosed_count,
+            salary_sample_count=r.salary_sample_count,
+            # k-anonymity: che median khi SỐ MẪU lương < ngưỡng (không dựa posting_count).
+            median_salary_vnd_month=validator.suppress_if_small(
+                r.salary_sample_count, r.median_salary_vnd_month,
+                min_size=settings.metrics_min_sample_size,
+            ),
         )
         for r in rows
     ]
-    as_of = rows[0].as_of if rows else datetime.now(UTC)
 
     resp = MarketMetricsResponse(
-        dimension=dimension, items=items, as_of=as_of, request_id=get_request_id()
+        dimension=dim, window=win, window_start=window_start, window_end=window_end,
+        items=items, as_of=as_of, request_id=get_request_id(),
     )
-    # 4) Ghi cache dạng JSON (dùng chung cho memory lẫn Redis).
     cache.set(cache_key, resp.model_dump_json())
-    log_event(logger, logging.INFO, "market_metrics", dimension=dimension,
+    log_event(logger, logging.INFO, "market_metrics", dimension=dim, window=win,
               cache="miss", groups=len(items))
     return resp

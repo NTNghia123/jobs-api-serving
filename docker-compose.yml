@@ -1,15 +1,18 @@
-# Tuần 7 — dựng CẢ HỆ bằng một lệnh:  docker compose up --build
-# Bốn service, khởi động theo đúng thứ tự phụ thuộc:
-#   mysql  (nguồn OLTP)  →  elt-init (bóc→sạch→gold, chạy 1 lần rồi thoát)  →  api
-#   redis  (cache + rate-limit chia sẻ giữa các instance)  →  api
-# Xem docs/adr/ADR-015 (topology compose) và ADR-014 (image).
+# MẶC ĐỊNH (migration Phase 0):  docker compose up --build
+#   → chỉ chạy  redis + api (backend `fake`, dữ liệu mẫu)  — boot sạch, KHÔNG cần MySQL/DuckDB.
+#     API tại http://localhost:8082 (X-API-Key: dev-local-key-team-ai).
 #
-# KHÁC scripts/docker-compose.dev-tools.yml: bản kia chỉ MySQL + phpMyAdmin để xem dữ liệu khi dev.
+# LEGACY (pipeline MySQL → DuckDB của Tuần 7, GIỮ LẠI dưới profile, KHÔNG chạy mặc định):
+#   docker compose --profile legacy-duckdb up --build mysql elt-init   # chỉ dựng lại kho DuckDB cũ
+#   (KHÔNG dùng `up` trơn với profile này vì nó kéo theo cả api+redis mặc định). LƯU Ý: serving từ DuckDB
+#   đang TẠM tắt (settings từ chối warehouse_backend=duckdb) → khôi phục ở Phase 4.
+# Xem docs/adr/ADR-014/015/018. Deploy thật: Cloud Run+BigQuery (Phase 6), VM+MongoDB (Phase 7).
 
 services:
-  # ---------- Nguồn OLTP ----------
+  # ---------- Nguồn OLTP (LEGACY — chỉ chạy với --profile legacy-duckdb) ----------
   mysql:
     image: mysql:8
+    profiles: ["legacy-duckdb"]
     environment:
       MYSQL_ROOT_PASSWORD: rootpw
       MYSQL_DATABASE: jobportal
@@ -50,11 +53,13 @@ services:
       timeout: 3s
       retries: 10
 
-  # ---------- Job ELT khởi tạo (one-shot) ----------
+  # ---------- Job ELT khởi tạo (LEGACY one-shot, profile legacy-duckdb) ----------
   # Dùng CHUNG image với api. Bóc MySQL → silver_jobs, rồi nướng gold, ghi vào /data/analytics.duckdb.
-  # Chạy xong THOÁT (0). api chờ service này 'completed_successfully' rồi mới mở kho (read_only).
+  # Chạy xong THOÁT (0). KHÔNG gate api 'fake' mặc định (api không còn depends_on elt-init); chỉ dựng lại
+  # kho DuckDB cũ khi cần — serving từ DuckDB tạm tắt tới Phase 4.
   elt-init:
     build: .
+    profiles: ["legacy-duckdb"]
     command: sh -c "python -m app.elt.build_silver && python -m app.elt.build_gold"
     environment:
       JOBS_API_MYSQL_URL: mysql+pymysql://reader:reader_pw@mysql:3306/jobportal # user CHỈ-ĐỌC
@@ -72,20 +77,13 @@ services:
       - "8082:8080"
     environment:
       JOBS_API_ENV: local # local: tự seed key dev 'dev-local-key-team-ai' cho demo
-      JOBS_API_LOG_FORMAT: json # container -> log JSON để observability đọc (Tuần 8)
-      JOBS_API_WAREHOUSE_BACKEND: duckdb
-      JOBS_API_DUCKDB_PATH: /data/analytics.duckdb
+      JOBS_API_LOG_FORMAT: json # container -> log JSON để observability đọc
+      JOBS_API_WAREHOUSE_BACKEND: fake # migration Phase 0: CHỈ 'fake' khả dụng (bigquery Phase 3, duckdb Phase 4)
       JOBS_API_CACHE_BACKEND: redis
       JOBS_API_REDIS_URL: redis://redis:6379/0
-      JOBS_API_RATE_LIMITER_BACKEND: redis # dùng RedisRateLimiter (§7) — đúng cho nhiều instance
-      JOBS_API_REQUEST_TIMEOUT_S: "20" # < client 30s, > query timeout (§6)
-      JOBS_API_QUERY_TIMEOUT_S: "10"
-      # PROD: bỏ JOBS_API_ENV=local và ĐẶT JOBS_API_API_KEYS (JSON hash) qua Secret Manager.
-    volumes:
-      - duckdb_data:/data:ro # API chỉ ĐỌC kho (khớp read_only=True ở adapter)
+      JOBS_API_RATE_LIMITER_BACKEND: redis # RedisRateLimiter — đúng cho nhiều instance
+      # PROD (Cloud Run, Phase 6): bỏ JOBS_API_ENV=local, ĐẶT JOBS_API_API_KEYS + PAGE_TOKEN_SECRET qua Secret Manager.
     depends_on:
-      elt-init:
-        condition: service_completed_successfully # kho phải tồn tại trước khi mở read_only
       redis:
         condition: service_healthy
 

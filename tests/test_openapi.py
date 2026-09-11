@@ -13,4 +13,4 @@ def test_moi_endpoint_co_operation_id(client):
 def test_enum_seniority_trong_openapi(client):
     spec = client.get("/openapi.json").json()
     sen = spec["components"]["schemas"]["Seniority"]
-    assert set(sen["enum"]) == {"junior", "mid", "senior"}
+    assert set(sen["enum"]) == {"junior", "mid", "senior", "unknown"}

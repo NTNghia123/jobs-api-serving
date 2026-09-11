@@ -1,12 +1,4 @@
-"""Unit test cho QueryValidator — test từng chính sách ĐỘC LẬP với Pydantic.
-
-[FILE MỚI]  Đích thật: tests/test_validator.py
-Hướng dẫn:  ../W4-Huong-Dan-Thuc-Hien.md §5
-
-GIẢI THÍCH: vì Pydantic đã chặn limit>100 / filter lạ ở biên HTTP, ta KHÔNG thể dựng
-SearchRequest xấu để test. Vì vậy test gọi thẳng các method hạt nhỏ của validator với
-giá trị thô — chứng minh chính sách hoạt động dù request tới từ đường nào.
-"""
+"""Unit test QueryValidator — test từng chính sách ĐỘC LẬP với Pydantic."""
 from __future__ import annotations
 
 import pytest
@@ -18,6 +10,7 @@ from app.errors import (
     LimitExceededError,
     MissingRequiredFilterError,
 )
+from app.models.jobs import JobItem
 
 v = QueryValidator()
 
@@ -30,55 +23,50 @@ def test_limit_qua_lon_bi_tu_choi():
 
 
 def test_limit_hop_le_qua():
-    v.check_limit(100)   # không ném lỗi
+    v.check_limit(100)
 
 
 # ---- allowlist filter ----
 def test_filter_la_bi_tu_choi():
     with pytest.raises(InvalidFilterError):
-        v.check_filters(["city"])          # 'city' không nằm trong FILTER_NAMES
+        v.check_filters(["city"])
 
 
 def test_filter_hop_le_qua():
-    v.check_filters(["seniority", "country"])
+    v.check_filters(["posted_after", "seniority", "source", "category"])
 
 
-# ---- required-filter (cơ chế rỗng cho data này) ----
-def test_required_rong_thi_luon_qua():
-    assert v.REQUIRED_FILTERS == frozenset()
-    v.check_required([])                    # rỗng → không thiếu gì
-
-
-def test_co_che_required_van_hoat_dong_khi_bat():
-    """Chứng minh cơ chế required-filter chạy đúng NẾU bật (dù data này để rỗng)."""
-    class WithRequired(QueryValidator):
-        REQUIRED_FILTERS = frozenset({"country"})
+# ---- required-filter: posted_after bắt buộc ----
+def test_posted_after_la_required():
+    assert v.REQUIRED_FILTERS == frozenset({"posted_after"})
+    v.check_required(["posted_after", "seniority"])   # đủ → qua
     with pytest.raises(MissingRequiredFilterError):
-        WithRequired().check_required([])   # thiếu 'country'
-    WithRequired().check_required(["country"])  # đủ → qua
+        v.check_required(["seniority"])               # thiếu posted_after
 
 
-# ---- k-anonymity ----
-def test_suppress_nhom_nho():
-    assert v.suppress_if_small(3, 55000) is None       # < 5 tin → che
-    assert v.suppress_if_small(10, 55000) == 55000     # đủ lớn → giữ
+# ---- k-anonymity theo salary_sample_count ----
+def test_suppress_theo_sample_count():
+    assert v.suppress_if_small(3, 55_000_000) is None        # < 5 mẫu → che
+    assert v.suppress_if_small(10, 55_000_000) == 55_000_000  # đủ → giữ
+    assert v.suppress_if_small(6, 1, min_size=8) is None      # ngưỡng từ settings
 
 
 # ---- default-deny cột trả ra ----
 def test_cot_pii_bi_chan():
     with pytest.raises(InvalidRequestError):
-        v.assert_safe_columns(["job_id", "title", "email"])   # 'email' là PII/không allowlist
+        v.assert_safe_columns(["job_id", "title", "email"])
 
 
 def test_cot_hop_le_qua():
-    v.assert_safe_columns(["job_id", "title", "company_name", "country", "seniority",
-                           "years_exp", "salary_min", "salary_max", "qualification", "url"])
+    v.assert_safe_columns(list(JobItem.model_fields))   # đúng schema JobItem → qua
 
 
-# ---- dimension/metric cho /market/metrics (T5) ----
+# ---- dimension/metric cho /market/metrics ----
 def test_dimension_metric_allowlist():
-    v.validate_dimension("seniority")
-    v.validate_metric("median_salary")
+    for d in ("source", "seniority", "category"):
+        v.validate_dimension(d)
+    v.validate_metric("median_salary_vnd_month")
+    v.validate_metric("salary_sample_count")
     with pytest.raises(InvalidRequestError):
         v.validate_dimension("email")
     with pytest.raises(InvalidRequestError):

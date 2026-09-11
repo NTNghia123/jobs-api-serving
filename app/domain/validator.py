@@ -43,11 +43,13 @@ PII_DENYLIST: frozenset[str] = frozenset(
 class QueryValidator:
     """Cổng kiểm soát. Stateless — có thể tạo một instance dùng chung."""
 
-    ALLOWED_DIMENSIONS: frozenset[str] = frozenset({"seniority", "country"})   # /market/metrics (T5)
-    ALLOWED_METRICS: frozenset[str] = frozenset({"median_salary", "posting_count"})
-    REQUIRED_FILTERS: frozenset[str] = frozenset()   # RỖNG cho data này — xem ADR-007
+    ALLOWED_DIMENSIONS: frozenset[str] = frozenset({"source", "seniority", "category"})   # /market/metrics
+    ALLOWED_METRICS: frozenset[str] = frozenset(
+        {"median_salary_vnd_month", "posting_count", "salary_disclosed_count", "salary_sample_count"}
+    )
+    REQUIRED_FILTERS: frozenset[str] = frozenset({"posted_after"})   # bắt buộc (ADR-020)
     MAX_LIMIT: int = MAX_LIMIT
-    MIN_GROUP_SIZE: int = 5                            # k-anonymity, áp dụng T5
+    MIN_GROUP_SIZE: int = 5                            # k-anonymity (ngưỡng mặc định; settings ghi đè)
 
     # ---- các kiểm tra hạt nhỏ (test được độc lập với Pydantic) ----
     def check_limit(self, limit: int) -> None:
@@ -83,14 +85,15 @@ class QueryValidator:
         if metric not in self.ALLOWED_METRICS:
             raise InvalidRequestError(f"metric không hợp lệ: {metric}", field="metric")
 
-    def suppress_if_small(self, posting_count: int, value):
-        """k-anonymity: ô tổng hợp từ quá ít tin thì che giá trị (trả None).
+    def suppress_if_small(self, sample_count: int, value, *, min_size: int | None = None):
+        """k-anonymity: median che (trả None) khi SỐ MẪU LƯƠNG quá nhỏ.
 
-        GIẢI THÍCH: 'lương trung bình ngành X ở công ty Y' khi chỉ từ 1–2 tin CHÍNH LÀ
-        lương của một người cụ thể → suy ngược được. Nhóm < MIN_GROUP_SIZE thì trả None.
-        Áp dụng thật ở endpoint /market/metrics (Tuần 5).
+        GIẢI THÍCH: ngưỡng dựa trên salary_sample_count (số job có đủ min&max), KHÔNG phải
+        posting_count — một nhóm 100 job nhưng chỉ 3 có lương thì median vẫn suy ngược được
+        (ADR-020). min_size mặc định MIN_GROUP_SIZE; handler truyền settings.metrics_min_sample_size.
         """
-        return None if posting_count < self.MIN_GROUP_SIZE else value
+        threshold = self.MIN_GROUP_SIZE if min_size is None else min_size
+        return None if sample_count < threshold else value
 
     # ---- default-deny cột trả ra ----
     def assert_safe_columns(self, column_names: Iterable[str]) -> None:

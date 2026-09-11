@@ -31,8 +31,8 @@ API chỉ-đọc phục vụ dữ liệu tin tuyển dụng cho các hệ thốn
 **Xác thực**: mọi endpoint `/v1` cần header `X-API-Key`. `/health` không cần. Vượt hạn mức → 429.
 
 **Nguyên tắc sử dụng**
-* Chỉ dùng filter và giá trị có trong `GET /v1/metadata` (seniority, experience_max, salary_min, country).
-* Chỉ dùng filter và giá trị có trong `GET /v1/metadata`.
+* `POST /v1/jobs/search` yêu cầu `filters.posted_after` (BẮT BUỘC). Chỉ dùng filter/giá trị có trong `GET /v1/metadata`.
+* `GET /v1/market/metrics` nhận `dimension` (source | seniority | category) và `window` (90d | all_time).
 * `page_token` là chuỗi mờ đã ký: lấy nguyên văn từ response trước, không tự tạo, không sửa.
 * Mọi response đều có `as_of` — hãy kiểm tra độ tươi trước khi hiển thị cho người dùng cuối.
 * API không trả về bất kỳ thông tin cá nhân nào (liên hệ nhà tuyển dụng, dữ liệu ứng viên).
@@ -44,7 +44,7 @@ TAGS_METADATA = [
     {"name": "operations", "description": "Vận hành: kiểm tra sống."},
     {"name": "discovery", "description": "Tự mô tả: filter và metric hợp lệ."},
     {"name": "jobs", "description": "Tìm kiếm tin tuyển dụng."},
-    {"name": "market", "description": "Benchmark lương theo cấp bậc/quốc gia."},   # ★ Tuần 5
+    {"name": "market", "description": "Benchmark lương theo source | seniority | category."},
 ]
 
 

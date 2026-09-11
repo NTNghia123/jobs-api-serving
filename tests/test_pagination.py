@@ -4,6 +4,7 @@ from app.domain.pagination import decode_page_token, encode_page_token
 from app.errors import InvalidPageTokenError
 
 SECRET = "test-secret"
+_BASE = {"posted_after": "2020-01-01"}   # filter tối thiểu hợp lệ
 
 
 def test_token_di_va_ve_nguyen_ven():
@@ -27,9 +28,8 @@ def test_token_cua_bo_filter_khac_bi_tu_choi():
 
 def test_phan_trang_khong_trung_khong_sot(client):
     seen, token = [], None
-    # 100 bản ghi với limit=3 cần 34 trang; chừa dư để còn phát hiện token lặp vô hạn.
-    for _ in range(100):
-        body = {"limit": 3}
+    for _ in range(100):   # dư trang để phát hiện lặp vô hạn
+        body = {"filters": _BASE, "limit": 2}
         if token:
             body["page_token"] = token
         data = client.post("/v1/jobs/search", json=body).json()
@@ -43,10 +43,11 @@ def test_phan_trang_khong_trung_khong_sot(client):
 
 
 def test_doi_filter_nhung_giu_token_cu_bi_tu_choi(client):
-    first = client.post("/v1/jobs/search", json={"limit": 2}).json()
+    first = client.post("/v1/jobs/search", json={"filters": _BASE, "limit": 2}).json()
+    assert first["next_page_token"]
     r = client.post(
         "/v1/jobs/search",
-        json={"limit": 2, "filters": {"seniority": "mid"},
+        json={"limit": 2, "filters": {**_BASE, "seniority": "mid"},
               "page_token": first["next_page_token"]},
     )
     assert r.status_code == 400
