@@ -9,11 +9,11 @@ không nằm rải rác trong code. Xem README mục "Cấu hình".
 from datetime import datetime
 from functools import lru_cache
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Backend kho khả dụng theo giai đoạn migration. Phase 3 thêm 'bigquery'; Phase 4 thêm 'duckdb'.
-_AVAILABLE_BACKENDS: frozenset[str] = frozenset({"fake"})
+_AVAILABLE_BACKENDS: frozenset[str] = frozenset({"fake", "bigquery"})
 
 
 # ★ THÊM Ở TUẦN 6 — một bản ghi key: server CHỈ lưu hash + hạn dùng, không lưu key thô.
@@ -48,8 +48,19 @@ class Settings(BaseSettings):
         description="Khoá HMAC ký page_token. PROD phải lấy từ Secret Manager.",
     )
 
-    # --- backend kho dữ liệu --- (migration: chỉ 'fake' khả dụng; bigquery→Phase 3, duckdb→Phase 4)
-    warehouse_backend: str = Field(default="fake", description="fake (Phase 0) | bigquery (Phase 3) | duckdb (Phase 4)")
+    # --- backend kho dữ liệu --- (migration: 'fake'+'bigquery' khả dụng; duckdb khôi phục Phase 4)
+    warehouse_backend: str = Field(default="fake", description="fake (test) | bigquery (prod) | duckdb (Phase 4)")
+
+    # ★ MIGRATION (Phase 3) — cấu hình BigQuery read adapter (tầng API CHỈ đọc BQ).
+    # LƯU Ý: KHÔNG có mongo_url ở đây — API không chạm Mongo (config ELT ở ENV riêng
+    # JOBS_MONGO_*/JOBS_BQ_*, xem ADR-020). Bắt buộc bq_project+bq_dataset khi backend=bigquery.
+    bq_project: str = Field(default="", description="Project BigQuery API đọc (JOBS_API_BQ_PROJECT).")
+    bq_dataset: str = Field(default="", description="Dataset API đọc, vd jobs_prod (JOBS_API_BQ_DATASET).")
+    bq_location: str = Field(default="asia-southeast1", description="Location BigQuery (khớp dataset).")
+    bq_maximum_bytes_billed: int = Field(
+        default=2_000_000_000, ge=1,
+        description="Trần byte mỗi truy vấn — cost guard; vượt → BQ từ chối job.",
+    )
 
     # ★ THÊM Ở TUẦN 3 — đường dẫn file kho DuckDB (API đọc từ đây, read-only).
     duckdb_path: str = Field(
@@ -119,14 +130,22 @@ class Settings(BaseSettings):
     @classmethod
     def _backend_available(cls, v: str):
         # FAIL-FAST ở boot cho MỌI backend chưa khả dụng (tránh boot-rồi-500 lúc request).
-        # Migration mở dần: Phase 0 chỉ 'fake'; 'bigquery' bật ở Phase 3; 'duckdb' khôi phục Phase 4.
+        # Migration mở dần: 'fake'+'bigquery' khả dụng; 'duckdb' khôi phục ở Phase 4.
         if v in _AVAILABLE_BACKENDS:
             return v
         msg = {
             "duckdb": "warehouse_backend='duckdb' TẠM tắt trong migration — khôi phục ở Phase 4.",
-            "bigquery": "warehouse_backend='bigquery' CHƯA khả dụng — sẽ có ở Phase 3.",
         }.get(v, f"warehouse_backend='{v}' không hỗ trợ.")
-        raise ValueError(f"{msg} Hiện chỉ dùng được 'fake' (migration Phase 0).")
+        raise ValueError(f"{msg} Hiện dùng được 'fake' hoặc 'bigquery'.")
+
+    @model_validator(mode="after")
+    def _require_bq_config_when_bigquery(self):
+        # backend=bigquery mà thiếu project/dataset → KHÔNG boot (tránh 500 lúc request đầu).
+        if self.warehouse_backend == "bigquery" and not (self.bq_project and self.bq_dataset):
+            raise ValueError(
+                "warehouse_backend='bigquery' cần JOBS_API_BQ_PROJECT và JOBS_API_BQ_DATASET."
+            )
+        return self
 
     @field_validator("page_token_secret")
     @classmethod

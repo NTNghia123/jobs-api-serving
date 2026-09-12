@@ -521,6 +521,7 @@ Chúng phụ thuộc schema cũ (`country`, numeric `job_id`, `years_exp`, salar
 
 ### Phase 2
 
+- Báo cáo tổng quan, cách chạy và checklist xác minh: [`phase-2/README.md`](phase-2/README.md).
 - Sanitized Mongo-like raw fixtures.
 - Mongo → BigQuery extract/transform/load.
 - Salary/date/experience/category mapper thật.

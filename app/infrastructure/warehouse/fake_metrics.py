@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from app.domain.ports.metrics_repository import MetricRow, MetricsRepository
+from app.domain.ports.metrics_repository import BatchRef, MetricRow, MetricsRepository
 
 _AS_OF = datetime(2026, 9, 1, 0, 0, tzinfo=UTC)
+_FAKE_BATCH_ID = "fake-batch-2026-09-01"   # prod lấy động từ warehouse_state (ADR-025)
 
 
 def _row(value, posting, disclosed, sample, median) -> MetricRow:
@@ -46,8 +47,9 @@ _SAMPLE: dict[str, list[MetricRow]] = {
 
 
 class FakeMetricsRepository(MetricsRepository):
-    def market_metrics(self, dimension: str, window: str) -> list[MetricRow]:
-        return list(_SAMPLE.get(dimension, []))
+    def current_batch(self) -> BatchRef:
+        return BatchRef(batch_id=_FAKE_BATCH_ID, as_of=_AS_OF)
 
-    def as_of(self) -> datetime:
-        return _AS_OF
+    def market_metrics(self, dimension: str, window: str, batch_id: str) -> list[MetricRow]:
+        # fake một-batch: bỏ qua batch_id/window, trả cùng dữ liệu mẫu.
+        return list(_SAMPLE.get(dimension, []))

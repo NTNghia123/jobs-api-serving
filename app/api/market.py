@@ -53,25 +53,27 @@ def market_metrics(
     dim, win = dimension.value, window.value
     validator.validate_dimension(dim)   # phòng thủ theo chiều sâu (Pydantic enum đã chặn ở biên)
 
-    # data cutoff của batch → neo cửa sổ 90d theo as_of_date (giờ VN, tránh lệch ngày).
-    as_of = repo.as_of()
-    as_of_date = as_of.astimezone(_VN_TZ).date()
+    # Đọc batch đang phục vụ MỘT lần: batch_id (cache key) + as_of (neo window). Dùng cùng
+    # batch_id cho cả cache key lẫn market_metrics → không lệch nếu batch mới publish giữa chừng.
+    batch = repo.current_batch()
+    as_of = batch.as_of
+    as_of_date = as_of.astimezone(_VN_TZ).date()   # neo cửa sổ 90d theo giờ VN (tránh lệch ngày)
     if win == MetricWindow.D90.value:
         window_end, window_start = as_of_date, as_of_date - timedelta(days=89)
     else:
         window_end = window_start = None
 
-    # Cache key: env + <mốc batch> + window + dimension. TẠM dùng as_of_date làm surrogate cho
-    # batch_id (fake một-batch). Phase 3/BigQuery: repo trả batch_id + data_as_of_at thật, thay
-    # as_of_date bằng batch_id (hai batch cùng ngày sẽ collision nếu vẫn dùng as_of_date) — ADR-026.
-    cache_key = f"{settings.env}:metrics:v1:{as_of_date.isoformat()}:{win}:{dim}"
+    # Cache key gắn batch_id (invariant 5, ADR-026): env + batch_id + window + dimension.
+    # batch_id duy nhất mỗi batch → publish batch mới không trả cache cũ; hai batch cùng ngày
+    # KHÔNG còn collision (khác hẳn as_of_date surrogate cũ).
+    cache_key = f"{settings.env}:metrics:v1:{batch.batch_id}:{win}:{dim}"
     cached = cache.get(cache_key)
     if cached is not None:
         resp = MarketMetricsResponse.model_validate_json(cached)
         log_event(logger, logging.INFO, "market_metrics", dimension=dim, window=win, cache="hit")
         return resp.model_copy(update={"request_id": get_request_id()})
 
-    rows = repo.market_metrics(dim, win)
+    rows = repo.market_metrics(dim, win, batch.batch_id)
     items = [
         MarketMetricRow(
             dimension_value=r.dimension_value,

@@ -1,8 +1,11 @@
 # Jobs Serving API
 
 API chỉ-đọc phục vụ dữ liệu tin tuyển dụng cho team AI.
-Trạng thái: **Migration Mongo → BigQuery — Phase 0 (data contract trên backend `fake`) hoàn thành — test suite xanh.**
+Trạng thái: **Migration Mongo → BigQuery — Phase 3 (BigQuery read adapter) hoàn thành trong source; `warehouse_backend=bigquery` đã bật được (cần dataset thật đã publish), backend `fake` vẫn là mặc định cho test — test suite xanh.**
 > ⚠️ `HUONG-DAN-CHAY-VA-DOC-CODE.md` là tài liệu **LEGACY (W3–W6)**, KHÔNG áp dụng cho migration hiện tại (còn dùng DuckDB/`country`/không `posted_after`). Contract & cách chạy hiện hành: **README này** + `docs/migration-mongo-bigquery-plan.md`.
+
+Báo cáo triển khai: [Phase 1 — GCP foundation](migrate-report/phase-1/README.md) ·
+[Phase 2 — ELT MongoDB → BigQuery](migrate-report/phase-2/README.md).
 
 ---
 
@@ -80,7 +83,7 @@ app/
 │   ├── pagination.py      ★ page_token ký HMAC
 │   └── ports/             interface + DTO đi kèm
 │       ├── job_repository.py      JobRepository + SearchResult
-│       ├── metrics_repository.py  MetricsRepository + MetricRow
+│       ├── metrics_repository.py  MetricsRepository + MetricRow + BatchRef
 │       └── cache.py               CacheBackend
 │
 ├── infrastructure/        RÌA: adapter nói chuyện với thế giới ngoài
@@ -88,10 +91,14 @@ app/
 │   │   ├── memory.py       InMemoryCache (cachetools)
 │   │   └── redis.py        RedisCache
 │   └── warehouse/
-│       ├── duckdb_jobs.py      DuckDBJobRepository
-│       ├── duckdb_metrics.py   DuckDBMetricsRepository
-│       ├── fake_jobs.py        FakeJobRepository (test double)
-│       ├── fake_metrics.py     FakeMetricsRepository
+│       ├── bigquery_read_sql.py   builder SQL THUẦN (keyset, filter, metadata) — test được
+│       ├── bigquery_exec.py       BigQueryExecutor (ADC, timeout→cancel→504, cost log)
+│       ├── bigquery_jobs.py       BigQueryJobRepository (Phase 3)
+│       ├── bigquery_metrics.py    BigQueryMetricsRepository (Phase 3)
+│       ├── duckdb_jobs.py         DuckDBJobRepository (tạm tắt — Phase 4)
+│       ├── duckdb_metrics.py      DuckDBMetricsRepository (tạm tắt — Phase 4)
+│       ├── fake_jobs.py           FakeJobRepository (test double)
+│       ├── fake_metrics.py        FakeMetricsRepository
 │       └── sql/search_jobs.sql
 │
 ├── models/                DTO Pydantic (hợp đồng đối ngoại)
@@ -117,9 +124,15 @@ Mọi biến đều có tiền tố `JOBS_API_`. Xem `.env.example`.
 |---|---|---|
 | `JOBS_API_ENV` | `local` | `local` / `staging` / `prod` |
 | `JOBS_API_LOG_FORMAT` | `json` | `text` khi dev cho dễ đọc |
-| `JOBS_API_WAREHOUSE_BACKEND` | `fake` | Migration: chỉ `fake` khả dụng. `bigquery` (Phase 3), `duckdb` (Phase 4) — app **từ chối boot** nếu đặt backend chưa khả dụng. |
+| `JOBS_API_WAREHOUSE_BACKEND` | `fake` | `fake` (test) hoặc `bigquery` (prod) khả dụng; `duckdb` (Phase 4) — app **từ chối boot** nếu đặt backend chưa khả dụng. |
+| `JOBS_API_BQ_PROJECT` | *(rỗng)* | Project BigQuery API đọc. **Bắt buộc** khi `backend=bigquery` (thiếu → không boot). |
+| `JOBS_API_BQ_DATASET` | *(rỗng)* | Dataset API đọc, vd `jobs_prod`. **Bắt buộc** khi `backend=bigquery`. |
+| `JOBS_API_BQ_LOCATION` | `asia-southeast1` | Location BigQuery (khớp dataset). |
+| `JOBS_API_BQ_MAXIMUM_BYTES_BILLED` | `2000000000` | Trần byte mỗi truy vấn (cost guard); vượt → BQ từ chối job. |
 | `JOBS_API_CACHE_BACKEND` | `memory` | `redis` cần Memorystore/Redis đang chạy. |
 | `JOBS_API_PAGE_TOKEN_SECRET` | *(dev)* | Khoá HMAC ký `page_token`. **Prod phải lấy từ Secret Manager.** App từ chối khởi động nếu `env != local` mà vẫn dùng giá trị mặc định. |
+
+> Tầng API **chỉ đọc BigQuery**, không chạm Mongo — không có `JOBS_API_MONGO_URL`. Config ELT (Mongo → BigQuery) ở ENV riêng `JOBS_MONGO_*`/`JOBS_BQ_*` (xem ADR-020, `docs/migration-mongo-bigquery-plan.md`).
 
 ### Quy ước tỷ giá cho Mongo → BigQuery
 
