@@ -7,3 +7,6 @@ openapi.json
 *.duckdb
 Report/
 de-plan-jobs-ver2.md
+
+# Hạ tầng: config riêng môi trường (chứa PROJECT_ID) — chỉ commit config.example.sh
+infra/gcp/config.sh
