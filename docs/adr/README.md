@@ -55,7 +55,7 @@ bối cảnh, phương án đã chọn, các phương án bị loại, và hệ 
 | [ADR-019](ADR-019-mongo-source-data-contract.md) | Nguồn MongoDB & data contract (schema mapping matrix) | Migration | Đã chấp nhận |
 | ADR-020 · BigQuery serving | keyset, window neo as_of, count defs, cursor 400/410, category EXISTS | Migration | **Kế hoạch (chưa tạo)** |
 | ADR-021 · Dagster ownership | Plan A wrapper, CAS+lock+idempotent+bootstrap | Migration | **Kế hoạch (chưa tạo)** |
-| ADR-022 · Deployment | Cloud Run + WIF, SA tách môi trường, staging/prod | Migration | **Kế hoạch (chưa tạo)** |
+| [ADR-022](ADR-022-deployment-cloud-run-wif.md) | Deployment: Cloud Run + WIF, SA tách môi trường, staging/prod, cost guard | Migration | Đã chấp nhận |
 | ADR-023 · Session mgmt | storage-state là secret, refresh thủ công | Migration | **Kế hoạch (chưa tạo)** |
 | ADR-024 · Salary normalization | FX 25.500, VND theo triệu, one-sided, period scope | Migration | **Kế hoạch (chưa tạo)** |
 | ADR-025 · Atomic publication | warehouse_state + warehouse_batches, transaction, rollback | Migration | **Kế hoạch (chưa tạo)** |

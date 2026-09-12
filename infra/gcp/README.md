@@ -44,7 +44,14 @@ nano config.sh      # hoặc dùng editor Cloud Shell
 | Kiểm tra | `bash 00-preflight.sh` | Xác nhận đăng nhập + project + billing (chỉ đọc) |
 | API | `bash 01-enable-apis.sh` | Bật các API cần dùng |
 | BigQuery | `bash 10-bigquery-datasets.sh` | 2 dataset `jobs_staging`, `jobs_prod` |
-| *(cụm sau)* | `20…`, `30…`, `40…`, `50…`, `60…` | SA/IAM, Artifact Registry, secrets, WIF, Redis |
+| Service accounts | `bash 20-service-accounts.sh` | 5 SA tách môi trường (không JSON key) |
+| IAM | `bash 21-iam-bindings.sh` | Phân quyền least-privilege theo môi trường |
+| Artifact Registry | `bash 30-artifact-registry.sh` | Docker repo + cleanup policy + writer cho CI |
+| Secrets | `bash 40-secrets.sh` | 4 secret tách môi trường + page-token ngẫu nhiên |
+| WIF | `bash 50-wif.sh` | Workload Identity Federation cho GitHub Actions |
+| Budget | `bash 70-budget.sh` | Cảnh báo chi phí 50/80/100% (nên chạy sớm) |
+| Redis *(tuỳ chọn, tốn phí)* | `CONFIRM_REDIS=1 bash 60-networking-redis.sh` | Memorystore Redis — CHỈ khi cần demo |
+| Dọn dẹp | `bash 99-teardown.sh redis` | Xoá Redis khi hết demo (bảo vệ credit) |
 
 Mỗi script in **PROJECT / REGION** ở đầu — nhìn kỹ trước khi để nó chạy tiếp, tránh nhầm project.
 
