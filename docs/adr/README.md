@@ -57,8 +57,8 @@ bối cảnh, phương án đã chọn, các phương án bị loại, và hệ 
 | ADR-021 · Dagster ownership | Plan A wrapper, CAS+lock+idempotent+bootstrap | Migration | **Kế hoạch (chưa tạo)** |
 | [ADR-022](ADR-022-deployment-cloud-run-wif.md) | Deployment: Cloud Run + WIF, SA tách môi trường, staging/prod, cost guard | Migration | Đã chấp nhận |
 | ADR-023 · Session mgmt | storage-state là secret, refresh thủ công | Migration | **Kế hoạch (chưa tạo)** |
-| ADR-024 · Salary normalization | FX 25.500, VND theo triệu, one-sided, period scope | Migration | **Kế hoạch (chưa tạo)** |
-| ADR-025 · Atomic publication | warehouse_state + warehouse_batches, transaction, rollback | Migration | **Kế hoạch (chưa tạo)** |
+| [ADR-024](ADR-024-salary-normalization.md) | Salary: đơn vị suy từ raw, FX 25.500 versioned, one-sided, trần sanity 10 tỷ | Migration | Đã chấp nhận |
+| [ADR-025](ADR-025-atomic-publication.md) | Atomic publication: state+batches, CAS trong transaction, state machine, rollback | Migration | Đã chấp nhận |
 | ADR-026 · Pagination snapshot | page token gắn batch, 410 expired, cache key gắn batch | Migration | **Kế hoạch (chưa tạo)** |
 
 > Chỉ mục xếp theo tuần/giai đoạn ra quyết định. ADR-020..026 được tham chiếu trong plan/ADR khác nhưng

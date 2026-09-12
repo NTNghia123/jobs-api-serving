@@ -4,6 +4,9 @@ Script `gcloud`/`bq` **idempotent** (chạy lại nhiều lần vẫn an toàn) 
 Jobs Serving API: BigQuery datasets, service accounts, Artifact Registry, secrets, WIF, Redis.
 Bạn chạy các script này; chúng KHÔNG tự chạy. Quyết định kiến trúc: [ADR-022](../../docs/adr/).
 
+Đọc [Migration Report — Phase 1](../../migrate-report/phase-1/README.md) để xem bức tranh tổng thể,
+ma trận quyền, cách xác minh và ranh giới với các phase tiếp theo.
+
 > **Mới dùng GCP?** Làm theo đúng thứ tự dưới. Không cần cài gì trên máy — dùng **Cloud Shell**.
 
 ---

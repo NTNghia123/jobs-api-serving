@@ -514,6 +514,7 @@ Chúng phụ thuộc schema cũ (`country`, numeric `job_id`, `years_exp`, salar
 
 ### Phase 1
 
+- Báo cáo tổng quan và checklist xác minh: [`phase-1/README.md`](phase-1/README.md).
 - GCP project/APIs/datasets.
 - Service accounts, WIF, Secret Manager và cost guard.
 - Memorystore/Direct VPC egress.
