@@ -21,6 +21,10 @@ from app.domain.ports.rate_limiter import RateLimiter
 
 logger = logging.getLogger("ratelimit.redis")
 
+# Timeout CÓ CHẶN cho socket: rate limiter chạy TRƯỚC mọi /v1; network blackhole mà không có timeout
+# sẽ treo request lâu hơn 25s Cloud Run. fail-open (allow) chỉ có tác dụng khi lỗi trả về NHANH.
+_REDIS_TIMEOUT_S = 0.5
+
 # KEYS[1] = khoá xô của client. ARGV = rate(token/giây), capacity, ttl(giây).
 # Trả 1 nếu cho phép (đã trừ 1 token), 0 nếu hết token.
 
@@ -59,7 +63,10 @@ class RedisRateLimiter(RateLimiter):
         # Import TRỄ: chỉ nạp redis khi thực sự dùng backend này (dev in-memory không cần Redis).
         import redis
 
-        self._r = redis.Redis.from_url(url, decode_responses=True)
+        self._r = redis.Redis.from_url(
+            url, decode_responses=True,
+            socket_connect_timeout=_REDIS_TIMEOUT_S, socket_timeout=_REDIS_TIMEOUT_S,
+        )
         self._rate = rate_per_sec
         self._cap = capacity
         self._prefix = key_prefix

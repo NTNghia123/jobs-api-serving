@@ -52,6 +52,7 @@ class QuarantineReason(str, Enum):
     MISSING_TITLE = "missing_title"           # title trống ở cả detail lẫn list
     INVALID_POSTED_DATE = "invalid_posted_date"  # posted_at lẫn first_seen_at đều invalid
     MISSING_DETAIL = "missing_detail"         # không có job_details completed (lỗi / chưa crawl xong) → chưa phục vụ
+    MISSING_URL = "missing_url"               # thiếu cả sourceUrl lẫn detailUrl → JobItem.url (bắt buộc) sẽ vỡ ở API
 
 
 @dataclass(frozen=True)

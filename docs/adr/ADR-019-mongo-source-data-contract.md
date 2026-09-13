@@ -47,7 +47,7 @@ parser TopDev/VietnamWorks) và dữ liệu Mongo:
 | job_id | STRING | No | `topdev:`+id | `vietnamworks:`+jobId | — (quarantine nếu thiếu id) |
 | source | STRING | No | `"topdev"` | `"vietnamworks"` | — |
 | external_id | STRING | No | source.id | source.jobId | — |
-| source_url | STRING | Yes | JobDetail.sourceUrl | sourceUrl/jobUrl | jobs.detailUrl |
+| source_url | STRING | Yes³ | JobDetail.sourceUrl | sourceUrl/jobUrl | jobs.detailUrl |
 | detail_status | STRING | No | stored detail status | stored detail status | `"pending"` nếu thiếu detail |
 | title | STRING | No¹ | detail.title | detail.jobTitle | jobs.title → nếu vẫn trống: quarantine |
 | company_name | STRING | Yes | raw.company_detail.display_name / company.display_name → null | raw.companyName → null | null |
@@ -74,6 +74,9 @@ parser TopDev/VietnamWorks) và dữ liệu Mongo:
 | batch_id | STRING | No | ELT batch | ELT batch | — |
 
 ¹ title trống ở cả detail lẫn list → quarantine (reason). ² null ở silver, hiện dưới bucket `unknown` khi group metrics.
+³ source_url nullable ở SILVER, nhưng **serving quarantine** job thiếu cả `sourceUrl` lẫn `detailUrl`
+(`QuarantineReason.MISSING_URL`, sửa 2026-09-13) → API giữ contract `JobItem.url: str` (bắt buộc),
+tránh ValidationError→500 khi map row url=null. Xem `mapper.py` cổng (5).
 
 **Quy tắc salary một-phía (rõ ràng — KHÔNG null cả hai cho lương một phía):**
 - có min, thiếu max → `salary_min_vnd_month` = normalized min, `salary_max_vnd_month` = **null**;

@@ -79,10 +79,18 @@ bash deploy/provision-vm.sh              # thêm CONFIRM_UFW=1 nếu muốn bậ
 # --- 4.4 Kiểm ---
 systemctl status dagster-daemon
 systemctl list-timers mongo-backup
-docker compose -f docker-compose.mongo.yml ps
+sudo docker compose -f docker-compose.mongo.yml ps
+
+# --- 4.5 BẬT schedule crawl (mặc định STOPPED để an toàn — chỉ bật SAU khi .env + BQ đã sẵn sàng) ---
+DH="<job-scraper-1>/orchestration/.dagster_home"
+DAGSTER_HOME="$DH" <job-scraper-1>/orchestration/.venv/bin/dagster schedule start \
+  daily_serving_batch_schedule -w <job-scraper-1>/orchestration/workspace.yaml
+# (hoặc bật bằng nút toggle trong UI Dagster → Automation → Schedules)
 ```
 
-VM tự động: crawl+ELT 02:00 (Dagster), backup 03:30 (timer). Xem UI qua SSH tunnel:
+Schedule `daily_serving_batch_schedule` khai báo **STOPPED** trong code (an toàn: không tự crawl
+trước khi cấu hình xong). Sau bước 4.5, VM mới tự động: crawl+ELT **02:00** (Dagster), backup **03:30**
+(timer). Xem UI qua SSH tunnel:
 ```bash
 ssh -L 3000:127.0.0.1:3000 <user>@<vm-ip>    # rồi mở http://localhost:3000
 ```

@@ -40,3 +40,11 @@ def test_set_fail_open_khong_nem(caplog):
     with caplog.at_level(logging.WARNING, logger="cache.redis"):
         c.set("k", "v")                      # KHÔNG ném → ghi cache thất bại được bỏ qua
     assert any("fail-open" in r.message for r in caplog.records)
+
+
+def test_client_co_bounded_timeout():
+    # Bounded socket timeout: fail-open chỉ hữu ích khi lỗi trả NHANH (không treo blackhole > 25s).
+    c = RedisCache("redis://localhost:6379/0")   # KHÔNG kết nối tới khi dùng
+    kw = c._r.connection_pool.connection_kwargs
+    assert kw.get("socket_connect_timeout") is not None
+    assert kw.get("socket_timeout") is not None

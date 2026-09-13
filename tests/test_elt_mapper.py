@@ -88,6 +88,24 @@ def test_quarantine_reasons(pair, reason):
     assert rec.batch_id == BATCH
 
 
+def test_missing_url_quarantined():
+    """Thiếu cả sourceUrl lẫn detailUrl → quarantine MISSING_URL (không để API 500)."""
+    job = fx.job("topdev", "tdNoUrl", detail_url=None)
+    detail = fx.detail("topdev", "tdNoUrl", source_url=None)
+    rec = map_record(job, detail, BATCH)
+    assert isinstance(rec, QuarantineRecord)
+    assert rec.reason_code.value == "missing_url"
+
+
+def test_url_present_maps_to_silver():
+    """Còn ít nhất một URL (detailUrl) → vẫn vào silver, url không None."""
+    job = fx.job("topdev", "tdUrl", detail_url="https://x.test/j")
+    detail = fx.detail("topdev", "tdUrl", source_url=None)
+    row = map_record(job, detail, BATCH)
+    assert isinstance(row, SilverRow)
+    assert row.source_url == "https://x.test/j"
+
+
 def test_quarantine_order_detail_before_title():
     """Thiếu cả detail lẫn title → báo missing_detail trước (cổng 2 trước cổng 3)."""
     job = fx.job("topdev", "tdX", title=None)

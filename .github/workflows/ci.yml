@@ -21,8 +21,8 @@ jobs:
         run: ruff check app tests
 
       - name: Typecheck (mypy) — advisory
-        # Còn 4 lỗi kiểu ở CODE CŨ (fake_jobs, build_silver, build_gold, cache/redis — xem §11
-        # báo cáo). Chạy để theo dõi, CHƯA chặn build; bật cổng cứng sau khi dọn nợ.
+        # Nợ kiểu sau migration: ~42 lỗi ở nhiều module (code cũ + ELT serving). Chạy để THEO DÕI,
+        # CHƯA chặn build; bật cổng cứng sau khi dọn nợ dần. (Con số có thể đổi khi thêm code.)
         run: mypy app
         continue-on-error: true
 

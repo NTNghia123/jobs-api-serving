@@ -40,21 +40,53 @@ def test_decide_publish_action(in_catalog, published, rows, expected):
 
 
 # --- transaction SQL ---
+# candidate name không chứa "b2" → test "b2 not in sql" vẫn kiểm được việc không nội suy GIÁ TRỊ.
+CAND = (
+    "silver_jobs_candidate__run",
+    "gold_market_metrics_candidate__run",
+    "warehouse_quarantine_candidate__run",
+)
+
+
 def test_transaction_is_atomic_with_cas_and_assert():
-    sql = build_publish_transaction_sql(TARGET)
+    sql = build_publish_transaction_sql(TARGET, *CAND)
     assert "BEGIN TRANSACTION" in sql and "COMMIT TRANSACTION" in sql
     assert "@@row_count != 1" in sql and "RAISE" in sql          # assert affected==1 → rollback
     assert "CURRENT_TIMESTAMP()" in sql                          # published_at sinh trong transaction
 
 
+def test_data_dml_inside_transaction():
+    """DELETE + INSERT-từ-candidate của silver/gold/quarantine phải nằm TRONG transaction
+    (giữa BEGIN…COMMIT) → run thua CAS rollback cả dữ liệu, không để lại rows trùng."""
+    sql = build_publish_transaction_sql(TARGET, *CAND)
+    body = sql[sql.index("BEGIN TRANSACTION"):sql.index("COMMIT TRANSACTION")]
+    for published in ("silver_jobs", "gold_market_metrics", "warehouse_quarantine"):
+        assert f"DELETE FROM `p.jobs_prod.{published}`" in body
+    # floor DELETE silver = MIN DATE → phủ MỌI ngày (kể cả < 2000), không bỏ sót khi reload (R9).
+    assert "DATE '0001-01-01'" in body
+    for cand in CAND:
+        assert f"SELECT * FROM `p.jobs_prod.{cand}`" in body       # INSERT nguồn = candidate
+    # DELETE/INSERT đứng TRƯỚC assert CAS (cùng transaction, sẽ rollback nếu CAS fail)
+    assert body.index("INSERT INTO `p.jobs_prod.silver_jobs`") < body.index("@@row_count != 1")
+
+
+def test_bootstrap_inside_transaction():
+    """Seed singleton NẰM TRONG transaction, TRƯỚC CAS → hai first-publish đồng thời không chèn 2
+    dòng ngoài txn (R8: BQ serialize/abort một run thay vì @@row_count=2 hỏng vĩnh viễn)."""
+    sql = build_publish_transaction_sql(TARGET, *CAND)
+    body = sql[sql.index("BEGIN TRANSACTION"):sql.index("COMMIT TRANSACTION")]
+    assert "NOT EXISTS" in body                                  # bootstrap INSERT … WHERE NOT EXISTS
+    assert body.index("NOT EXISTS") < body.index("@@row_count != 1")   # bootstrap trước CAS assert
+
+
 def test_cas_is_null_safe_for_bootstrap():
-    sql = build_publish_transaction_sql(TARGET)
+    sql = build_publish_transaction_sql(TARGET, *CAND)
     assert "published_batch_id = @expected_prev" in sql
     assert "published_batch_id IS NULL AND @expected_prev IS NULL" in sql
 
 
 def test_sql_uses_backticked_identifiers_and_params_not_values():
-    sql = build_publish_transaction_sql(TARGET)
+    sql = build_publish_transaction_sql(TARGET, *CAND)
     assert "`p.jobs_prod.warehouse_state`" in sql
     assert "`p.jobs_prod.warehouse_batches`" in sql
     assert "@batch_id" in sql                     # giá trị là param

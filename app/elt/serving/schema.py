@@ -38,6 +38,7 @@ TABLE_GOLD_CANDIDATE = "gold_market_metrics_candidate"
 TABLE_STATE = "warehouse_state"
 TABLE_BATCHES = "warehouse_batches"
 TABLE_QUARANTINE = "warehouse_quarantine"
+TABLE_QUARANTINE_CANDIDATE = "warehouse_quarantine_candidate"
 
 # --- partition / cluster (serving) ---
 SILVER_PARTITION_FIELD = "effective_posted_date"   # DATE → partition prune theo posted_after

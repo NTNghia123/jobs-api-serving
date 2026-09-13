@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="860" viewBox="0 0 1600 860">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#344563"/></marker>
+    <marker id="arrowGray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#7A869A"/></marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#091E42" flood-opacity=".18"/></filter>
+    <style>
+      .title{font:700 24px Arial,sans-serif;fill:#172B4D}.subtitle{font:12px Arial,sans-serif;fill:#5E6C84}.laneTitle{font:700 15px Arial,sans-serif}.stepTitle{font:700 12px Arial,sans-serif;fill:#172B4D}.stepText{font:11px Arial,sans-serif;fill:#5E6C84}.small{font:10px Arial,sans-serif;fill:#5E6C84}.iconText{font:700 13px Arial,sans-serif;fill:#fff;text-anchor:middle;dominant-baseline:middle}.flow{fill:none;stroke:#344563;stroke-width:1.6;marker-end:url(#arrow)}.dash{fill:none;stroke:#7A869A;stroke-width:1.4;stroke-dasharray:7 5;marker-end:url(#arrowGray)}.dot{fill:none;stroke:#5F6368;stroke-width:1.4;stroke-dasharray:2 5;marker-end:url(#arrowGray)}.box{fill:#fff;stroke:#7A869A;stroke-width:1}.labelbg{fill:#fff}.center{text-anchor:middle}.hex{filter:url(#shadow)}
+    </style>
+  </defs>
+  <rect width="1600" height="860" fill="#fff"/>
+  <text x="800" y="36" class="title center">JOBS SERVING API — DATA &amp; DEPLOYMENT PIPELINE</text>
+  <text x="800" y="61" class="subtitle center">MongoDB → Dagster/Python ELT → BigQuery → FastAPI / Cloud Run</text>
+
+  <rect x="20" y="88" width="500" height="660" fill="#fff" stroke="#9CB8E8"/><rect x="20" y="88" width="500" height="38" fill="#EAF2FF" stroke="#9CB8E8"/>
+  <text x="270" y="113" class="laneTitle center" fill="#174EA6">DATA INGESTION &amp; ORCHESTRATION</text>
+  <rect x="520" y="88" width="510" height="660" fill="#fff" stroke="#9CC8AA"/><rect x="520" y="88" width="510" height="38" fill="#EAF7EF" stroke="#9CC8AA"/>
+  <text x="775" y="113" class="laneTitle center" fill="#176B3A">TRANSFORM, QUALITY &amp; WAREHOUSE</text>
+  <rect x="1030" y="88" width="550" height="660" fill="#fff" stroke="#E7BC88"/><rect x="1030" y="88" width="550" height="38" fill="#FFF3E6" stroke="#E7BC88"/>
+  <text x="1305" y="113" class="laneTitle center" fill="#A64B00">SERVING, DELIVERY &amp; OPERATIONS</text>
+
+  <!-- flow lines are behind nodes -->
+  <path class="flow" d="M220 239H290"/><path class="flow" d="M375 273V315H140V410"/>
+  <path class="flow" d="M230 449H285"/><path class="flow" d="M470 449H505V244H540"/>
+  <path class="flow" d="M700 244H710"/><path class="flow" d="M890 244H900"/><path class="flow" d="M958 283V330H628V450"/>
+  <path class="flow" d="M715 489H725"/><path class="flow" d="M900 489H910"/><path class="flow" d="M1020 489H1040V307H1060"/>
+  <path class="flow" d="M1245 307H1380"/>
+  <path class="dash" d="M1123 468V346"/><path class="dash" d="M1292 468V380H1185V346"/>
+  <path class="dot" d="M1245 325H1480V468"/>
+
+  <!-- service 1 -->
+  <circle cx="86" cy="174" r="22" fill="#E53935" filter="url(#shadow)"/><text x="86" y="174" class="iconText" font-size="11">TD</text>
+  <circle cx="134" cy="174" r="22" fill="#F57C00" filter="url(#shadow)"/><text x="134" y="174" class="iconText" font-size="9">VNW</text>
+  <rect class="box" x="50" y="205" width="170" height="68"/><text x="135" y="228" class="stepTitle center">1. Nguồn tuyển dụng</text><text x="135" y="249" class="stepText center">TopDev + VietnamWorks</text>
+
+  <!-- service 2 -->
+  <circle cx="373" cy="175" r="23" fill="#3776AB" stroke="#FFD343" stroke-width="4" filter="url(#shadow)"/><text x="373" y="175" class="iconText">Py</text>
+  <rect class="box" x="290" y="205" width="170" height="68"/><text x="375" y="228" class="stepTitle center">2. Crawl dữ liệu</text><text x="375" y="249" class="stepText center">Python web scraper</text>
+
+  <!-- service 3 -->
+  <path class="hex" d="M112 352H156L168 375L156 398H112L100 375Z" fill="#47A248"/><text x="134" y="375" class="iconText" font-size="18">M</text>
+  <rect class="box" x="50" y="410" width="180" height="78"/><text x="140" y="433" class="stepTitle center">3. Lưu dữ liệu nguồn</text><text x="140" y="454" class="stepText center">MongoDB job_crawler</text><text x="140" y="470" class="stepText center">trên Compute Engine VM</text>
+
+  <!-- service 4 -->
+  <path class="hex" d="M350 352H390L402 375L390 398H350L338 375Z" fill="#7C4DFF"/><text x="370" y="375" class="iconText" font-size="18">D</text>
+  <rect class="box" x="285" y="410" width="185" height="78"/><text x="377" y="433" class="stepTitle center">4. Điều phối daily batch</text><text x="377" y="454" class="stepText center">Dagster daemon + webserver</text><text x="377" y="470" class="stepText center">concurrency pool = 1</text>
+
+  <!-- service 5 -->
+  <circle cx="598" cy="175" r="23" fill="#3776AB" stroke="#FFD343" stroke-width="4" filter="url(#shadow)"/><text x="598" y="175" class="iconText">Py</text>
+  <rect class="box" x="540" y="205" width="160" height="78"/><text x="620" y="228" class="stepTitle center">5. Extract</text><text x="620" y="249" class="stepText center">jobs LEFT JOIN job_details</text><text x="620" y="265" class="stepText center">+ source counts</text>
+
+  <!-- service 6 -->
+  <circle cx="780" cy="175" r="23" fill="#3776AB" stroke="#FFD343" stroke-width="4" filter="url(#shadow)"/><text x="780" y="175" class="iconText">Py</text>
+  <rect class="box" x="710" y="205" width="180" height="78"/><text x="800" y="228" class="stepTitle center">6. Transform</text><text x="800" y="249" class="stepText center">Map schema; chuẩn hoá ngày,</text><text x="800" y="265" class="stepText center">lương, seniority, category</text>
+
+  <!-- service 7 -->
+  <circle cx="963" cy="175" r="23" fill="#22A06B" filter="url(#shadow)"/><text x="963" y="176" class="iconText" font-size="22">✓</text>
+  <rect class="box" x="900" y="205" width="115" height="78"/><text x="958" y="228" class="stepTitle center">7. Quality checks</text><text x="958" y="249" class="stepText center">Reconcile, unique,</text><text x="958" y="265" class="stepText center">k-anon, quarantine</text>
+
+  <!-- service 8 -->
+  <path class="hex" d="M570 390H616L628 415L616 440H570L558 415Z" fill="#4285F4"/><rect x="574" y="414" width="5" height="12" fill="#fff"/><rect x="583" y="407" width="5" height="19" fill="#fff"/><rect x="592" y="399" width="5" height="27" fill="#fff"/><circle cx="599" cy="412" r="15" fill="none" stroke="#fff" stroke-width="2"/><path d="M609 423L618 432" stroke="#fff" stroke-width="3"/>
+  <rect class="box" x="540" y="450" width="175" height="78"/><text x="628" y="473" class="stepTitle center">8. Candidate tables</text><text x="628" y="494" class="stepText center">BigQuery WRITE_TRUNCATE</text><text x="628" y="510" class="stepText center">silver / gold / quarantine</text>
+
+  <!-- service 9 -->
+  <path d="M784 390L813 415L784 440L755 415Z" fill="#F9AB00" filter="url(#shadow)"/><text x="784" y="415" class="iconText">TX</text>
+  <rect class="box" x="725" y="450" width="175" height="78"/><text x="813" y="473" class="stepTitle center">9. Atomic publish</text><text x="813" y="494" class="stepText center">APPEND batch + verify</text><text x="813" y="510" class="stepText center">INSERT catalog + CAS pointer</text>
+
+  <!-- service 10 -->
+  <path class="hex" d="M940 390H986L998 415L986 440H940L928 415Z" fill="#4285F4"/><rect x="944" y="414" width="5" height="12" fill="#fff"/><rect x="953" y="407" width="5" height="19" fill="#fff"/><rect x="962" y="399" width="5" height="27" fill="#fff"/><circle cx="969" cy="412" r="15" fill="none" stroke="#fff" stroke-width="2"/><path d="M979 423L988 432" stroke="#fff" stroke-width="3"/>
+  <rect class="box" x="910" y="450" width="110" height="92"/><text x="965" y="471" class="stepTitle center">10. Published</text><text x="965" y="487" class="stepTitle center">warehouse</text><text x="965" y="507" class="stepText center">BigQuery jobs_prod</text><text x="965" y="523" class="stepText center">silver · gold · state</text>
+
+  <!-- service 11 -->
+  <circle cx="1147" cy="230" r="25" fill="#009688" filter="url(#shadow)"/><path d="M1152 208L1132 233H1144L1138 252L1161 224H1149Z" fill="#fff"/>
+  <rect class="box" x="1060" y="268" width="185" height="78"/><text x="1152" y="291" class="stepTitle center">11. Serving API</text><text x="1152" y="312" class="stepText center">FastAPI trên Cloud Run</text><text x="1152" y="328" class="stepText center">read-only BigQuery adapter</text>
+
+  <!-- service 14 -->
+  <circle cx="1465" cy="230" r="25" fill="#172B4D" filter="url(#shadow)"/><text x="1465" y="230" class="iconText">AI</text>
+  <rect class="box" x="1380" y="268" width="175" height="78"/><text x="1468" y="291" class="stepTitle center">14. API consumers</text><text x="1468" y="312" class="stepText center">AI team / client apps</text><text x="1468" y="328" class="stepText center">REST + X-API-Key</text>
+
+  <!-- support services -->
+  <path class="hex" d="M1080 410H1124L1136 434L1124 458H1080L1068 434Z" fill="#4285F4"/><circle cx="1098" cy="431" r="7" fill="none" stroke="#fff" stroke-width="3"/><path d="M1105 431H1123M1117 431V438M1111 431V436" stroke="#fff" stroke-width="3"/>
+  <rect class="box" x="1048" y="468" width="150" height="72"/><text x="1123" y="490" class="stepTitle center">12. Secrets</text><text x="1123" y="511" class="stepText center">Secret Manager</text><text x="1123" y="527" class="stepText center">API keys + page token</text>
+  <path class="hex" d="M1260 410H1304L1316 434L1304 458H1260L1248 434Z" fill="#D82C20"/><path d="M1264 423L1282 417L1302 423L1282 429Z M1264 432L1282 426L1302 432L1282 438Z M1264 441L1282 435L1302 441L1282 447Z" fill="none" stroke="#fff" stroke-width="2"/>
+  <rect class="box" x="1210" y="468" width="165" height="72"/><text x="1292" y="490" class="stepTitle center">13. Cache &amp; rate limit</text><text x="1292" y="511" class="stepText center">Memorystore / Redis</text><text x="1292" y="527" class="stepText center">(optional; memory-first)</text>
+  <path class="hex" d="M1450 410H1494L1506 434L1494 458H1450L1438 434Z" fill="#5F6368"/><path d="M1454 444V430M1465 444V421M1476 444V426M1487 444V417" stroke="#fff" stroke-width="4"/>
+  <rect class="box" x="1395" y="468" width="160" height="72"/><text x="1475" y="490" class="stepTitle center">18. Observability</text><text x="1475" y="511" class="stepText center">JSON logs + request_id</text><text x="1475" y="527" class="stepText center">BQ cost / timeout metrics</text>
+
+  <!-- CI/CD -->
+  <rect x="1060" y="578" width="495" height="142" rx="7" fill="#F4F5F7" stroke="#B3BAC5" stroke-dasharray="6 4"/><text x="1075" y="600" class="stepTitle">CI/CD — BUILD &amp; DEPLOY STAGING</text>
+  <path class="dash" d="M1127 641H1210"/><path class="dash" d="M1258 641H1350"/><path class="dash" d="M1398 641H1515V365H1180V346"/>
+  <circle cx="1106" cy="641" r="21" fill="#24292F"/><text x="1106" y="641" class="iconText" font-size="10">GH</text><text x="1106" y="679" class="stepTitle center">15</text><text x="1106" y="696" class="small center">GitHub Actions</text><text x="1106" y="710" class="small center">test + build</text>
+  <path d="M1210 620H1246L1258 641L1246 662H1210L1198 641Z" fill="#4285F4"/><text x="1228" y="641" class="iconText" font-size="10">ID</text><text x="1228" y="679" class="stepTitle center">16</text><text x="1228" y="696" class="small center">Workload Identity</text><text x="1228" y="710" class="small center">Federation</text>
+  <path d="M1350 620H1386L1398 641L1386 662H1350L1338 641Z" fill="#4285F4"/><text x="1368" y="641" class="iconText" font-size="10">AR</text><text x="1368" y="679" class="stepTitle center">17</text><text x="1368" y="696" class="small center">Artifact Registry</text><text x="1368" y="710" class="small center">image : commit SHA</text>
+
+  <rect x="20" y="766" width="1560" height="44" rx="7" fill="#FFFBE6" stroke="#F2CD5C"/><text x="800" y="792" class="stepText center"><tspan font-weight="700">Runtime backends:</tspan> production = BigQuery · local development = DuckDB · tests = Fake repositories</text>
+  <text x="800" y="834" class="small center">Solid arrow: data/control flow    ·    Dashed arrow: configuration/deployment    ·    Dotted arrow: logs/metrics</text>
+</svg>

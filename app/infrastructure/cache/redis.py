@@ -11,6 +11,10 @@ from app.domain.ports.cache import CacheBackend
 
 logger = logging.getLogger("cache.redis")
 
+# Timeout CÓ CHẶN cho socket: fail-open chỉ cứu khi Redis TRẢ LỖI; một network blackhole (SYN không
+# hồi) sẽ TREO tới timeout của OS (hàng chục giây) > 25s Cloud Run. Đặt nhỏ để hỏng-thì-nhanh.
+_REDIS_TIMEOUT_S = 0.5
+
 
 class RedisCache(CacheBackend):
     def __init__(self, url: str, ttl_seconds: int = 300):
@@ -18,7 +22,10 @@ class RedisCache(CacheBackend):
         # in-memory không cần cài/chạy Redis.
         import redis
 
-        self._r = redis.Redis.from_url(url, decode_responses=True)  # get() trả str, không phải bytes
+        self._r = redis.Redis.from_url(
+            url, decode_responses=True,          # get() trả str, không phải bytes
+            socket_connect_timeout=_REDIS_TIMEOUT_S, socket_timeout=_REDIS_TIMEOUT_S,
+        )
         self._ttl = ttl_seconds
 
     # FAIL-OPEN (invariant plan: "Cache fail-open"): cache chỉ để TĂNG TỐC, không phải nguồn sự

@@ -113,6 +113,11 @@ def map_record(
     )
     location = _clean(detail_doc.get("address")) or _clean(_path(detail_doc, "companyInfo", "address"))
     source_url = _clean(detail_doc.get("sourceUrl")) or _clean(job_doc.get("detailUrl"))
+    # 5) thiếu URL nguồn → JobItem.url (bắt buộc) sẽ ném ValidationError ở API (500 cả trang).
+    #    Chọn (a): quarantine — không phục vụ job không có link. Giữ contract url: str.
+    if source_url is None:
+        return _quarantine(batch_id, source, external_id, QuarantineReason.MISSING_URL)
+
     last_seen = job_doc.get("lastSeenAt")
     last_seen = last_seen if isinstance(last_seen, datetime) else None
 

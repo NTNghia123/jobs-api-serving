@@ -6,7 +6,7 @@ So với bản Tuần 2, chỉ THÊM 2 field ở cuối (đánh dấu ★). Ph�
 Nguyên tắc: mọi thứ khác nhau giữa local / staging / prod đều phải nằm ở đây,
 không nằm rải rác trong code. Xem README mục "Cấu hình".
 """
-from datetime import datetime
+from datetime import UTC, datetime
 from functools import lru_cache
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -20,6 +20,15 @@ _AVAILABLE_BACKENDS: frozenset[str] = frozenset({"fake", "bigquery", "duckdb"})
 class ApiKeyEntry(BaseModel):
     key_sha256: str
     expires_at: datetime | None = None
+
+    @field_validator("expires_at")
+    @classmethod
+    def _ensure_tz_aware(cls, v: datetime | None) -> datetime | None:
+        # JSON như "2030-01-01T00:00:00" (không offset) → pydantic ra datetime NAIVE. So sánh với
+        # now() aware-UTC ở domain/auth.py ném TypeError → 500. Chuẩn hoá naive→UTC ngay ở biên.
+        if v is not None and v.tzinfo is None:
+            return v.replace(tzinfo=UTC)
+        return v
 
 
 class Settings(BaseSettings):
