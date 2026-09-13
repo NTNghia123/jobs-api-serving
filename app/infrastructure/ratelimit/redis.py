@@ -14,9 +14,12 @@ cục bộ của từng máy sẽ lệch nhau và tính token sai.
 """
 from __future__ import annotations
 
+import logging
 import math
 
 from app.domain.ports.rate_limiter import RateLimiter
+
+logger = logging.getLogger("ratelimit.redis")
 
 # KEYS[1] = khoá xô của client. ARGV = rate(token/giây), capacity, ttl(giây).
 # Trả 1 nếu cho phép (đã trừ 1 token), 0 nếu hết token.
@@ -66,5 +69,12 @@ class RedisRateLimiter(RateLimiter):
 
     # hàm chạy Lua script
     def allow(self, client_id: str) -> bool:
-        allowed = self._script(keys=[self._prefix + client_id], args=[self._rate, self._cap, self._ttl])
-        return bool(allowed)
+        # FAIL-OPEN (invariant plan: "rate-limiter fail-open+log"): rate-limit là lớp BẢO VỆ tốc độ,
+        # KHÔNG phải nguồn sự thật. Redis chết → CHO QUA (return True) để API vẫn sống, log WARN để
+        # còn thấy. Đánh đổi: trong lúc Redis down, giới hạn tốc độ tạm bị bỏ (chấp nhận cho demo).
+        try:
+            allowed = self._script(keys=[self._prefix + client_id], args=[self._rate, self._cap, self._ttl])
+            return bool(allowed)
+        except Exception as exc:  # noqa: BLE001 — cố ý nuốt MỌI lỗi để fail-open
+            logger.warning("rate-limiter lỗi (fail-open → cho qua): %s", exc)
+            return True

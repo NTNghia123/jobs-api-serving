@@ -5,7 +5,11 @@ bật bằng JOBS_API_CACHE_BACKEND=redis. Xem docs/adr/ADR-009.
 """
 from __future__ import annotations
 
+import logging
+
 from app.domain.ports.cache import CacheBackend
+
+logger = logging.getLogger("cache.redis")
 
 
 class RedisCache(CacheBackend):
@@ -17,8 +21,18 @@ class RedisCache(CacheBackend):
         self._r = redis.Redis.from_url(url, decode_responses=True)  # get() trả str, không phải bytes
         self._ttl = ttl_seconds
 
+    # FAIL-OPEN (invariant plan: "Cache fail-open"): cache chỉ để TĂNG TỐC, không phải nguồn sự
+    # thật. Redis chết (mạng VPC chớp, restart) → KHÔNG được làm sập request. get lỗi → coi như
+    # miss (handler sẽ tính lại từ BigQuery); set lỗi → bỏ qua. Luôn log WARN để còn nhìn thấy.
     def get(self, key: str) -> str | None:
-        return self._r.get(key)
+        try:
+            return self._r.get(key)
+        except Exception as exc:  # noqa: BLE001 — cố ý nuốt MỌI lỗi cache để fail-open
+            logger.warning("cache get lỗi (fail-open → coi như miss): %s", exc)
+            return None
 
     def set(self, key: str, value: str) -> None:
-        self._r.setex(key, self._ttl, value)   # SET kèm hạn sống (giây) trong một lệnh
+        try:
+            self._r.setex(key, self._ttl, value)   # SET kèm hạn sống (giây) trong một lệnh
+        except Exception as exc:  # noqa: BLE001 — cố ý nuốt MỌI lỗi cache để fail-open
+            logger.warning("cache set lỗi (fail-open → bỏ qua ghi cache): %s", exc)
