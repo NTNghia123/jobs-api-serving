@@ -543,10 +543,19 @@ Chúng phụ thuộc schema cũ (`country`, numeric `job_id`, `years_exp`, salar
 - Fake/DuckDB/BigQuery parity tests.
 - Injection tests theo filters mới.
 
-### Phase 5–8
+### Phase 5
 
-- Dagster orchestration.
-- Cloud Run CI/CD và staging/prod.
+- Dagster orchestration (Plan A wrapper, concurrency, run_metric) — repo scraper `job-scraper-1`.
+
+### Phase 6
+
+- Báo cáo tổng quan + runbook staging/prod: [`phase-6/README.md`](phase-6/README.md).
+- Cloud Run deploy script (staging/prod), image tag = commit SHA → Artifact Registry.
+- CI/CD GitHub Actions + WIF (deploy staging tự động), smoke cổng cứng qua identity token.
+- Public access tối thiểu quyền (`allow-public.sh`), memory-first + toggle Redis/VPC egress.
+
+### Phase 7–8
+
 - VM operations, backup/restore.
 - Nguồn tuyển dụng và tính năng mở rộng sau.
 

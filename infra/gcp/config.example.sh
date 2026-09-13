@@ -38,6 +38,15 @@ export BUDGET_AMOUNT_USD="50"                    # ngưỡng cảnh báo chi ph�
 export BQ_MAX_BYTES_BILLED="2000000000"          # 2 GB trần mỗi query (an toàn cho corpus ~15k job)
 export RUN_MAX_INSTANCES="3"                     # trần số instance Cloud Run
 
+# --- Cloud Run runtime (Phase 6 — deploy-cloud-run.sh) ---
+export RUN_SERVICE_STAGING="jobs-serving-api-staging"
+export RUN_SERVICE_PROD="jobs-serving-api-prod"
+export AR_IMAGE="api"                            # tên image trong repo AR → path .../${AR_REPO}/${AR_IMAGE}
+export RUN_CPU="1"
+export RUN_MEMORY="512Mi"
+export RUN_CONCURRENCY="40"                      # số request đồng thời mỗi instance
+export RUN_TIMEOUT="25"                          # giây; PHẢI > request_timeout_s(20) > query_timeout_s(10)
+
 # --- WIF cho GitHub Actions (điền khi tới cụm 1.5; dạng "owner/repo") ---
 export GITHUB_REPO="tuniiiiii/jobs-serving-api"
 

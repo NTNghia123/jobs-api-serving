@@ -43,3 +43,26 @@ credit** (kiểm soát chi phí chặt), team nhỏ (ưu tiên vận hành đơn
   hạ tầng tái lập được (script idempotent); deploy prod có kiểm soát (thủ công).
 - Đánh đổi: 1 project → cách ly yếu hơn 2 project; script gcloud kém khai báo hơn Terraform; prod
   deploy thủ công (chưa promotion/canary/rollback tự động — để [SAU]); Memorystore phải nhớ teardown.
+
+## Phase 6 — quyết định triển khai (bổ sung 2026-09-13)
+
+Khi hiện thực Cloud Run + CI/CD, các nhánh lựa chọn được chốt như sau (runbook: `migrate-report/phase-6/`):
+
+- **(1A) Cấu hình = script `gcloud run deploy` + flag**, không YAML manifest / Terraform (để [SAU]).
+  Một script `infra/gcp/deploy-cloud-run.sh` tham số hoá `staging|prod` (2 config, 1 nguồn logic).
+- **(2A) CI deploy staging tự động khi push nhánh `GCP_Deploy`**, gate SAU job `quality` (ruff+pytest
+  xanh mới deploy). **prod deploy thủ công** (chạy tay script với creds owner) — không WIF.
+- **(3A) memory-first:** staging chạy `cache_backend=memory` + `rate_limiter_backend=memory`, KHÔNG
+  bật Direct VPC egress. Redis + VPC egress chỉ bật qua toggle `WITH_REDIS=1 REDIS_HOST=...` (sau khi
+  chạy `60-networking-redis.sh`) — tránh chi phí Memorystore idle giai đoạn thử nghiệm.
+- **(B) Public access tối thiểu quyền:** CI deployer giữ `run.developer` (KHÔNG set IAM public). Mở
+  public = gán `allUsers→run.invoker` **một lần** bằng creds owner (`allow-public.sh`); deploy CI ra
+  service private (`PUBLIC_ACCESS=0`). Public chỉ ở tầng hạ tầng — `/v1/*` vẫn bắt buộc X-API-Key.
+- **Smoke = cổng cứng, gọi service PRIVATE bằng identity token** của deployer SA (không phụ thuộc đã
+  allow-public hay chưa). Cần cấp thêm `roles/run.invoker` (cấp project, chỉ staging deployer);
+  `workloadIdentityUser` sẵn có đã đủ mint OpenID token → KHÔNG cần `tokenCreator`.
+- **Image tag = commit SHA**, verify tồn tại trong Artifact Registry trước khi deploy. **Secret pin
+  version** (version ENABLED mới nhất tại thời điểm deploy) — bất biến/tái lập, override được.
+- **Runtime hardening:** chạy dưới `sa-api-reader-{env}`; secrets nạp qua `--set-secrets` (pin
+  version), KHÔNG `GOOGLE_APPLICATION_CREDENTIALS`; cost guard `--max-instances` + `--cpu/--memory/
+  --concurrency/--timeout` (Cloud Run 25s > request 20s > query 10s).

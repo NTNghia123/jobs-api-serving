@@ -82,6 +82,13 @@ echo "== Cloud Run deploy (CI) =="
 grant_project "${SA_CI_DEPLOYER_STAGING}" "roles/run.developer"
 grant_project "${SA_CI_DEPLOYER_PROD}"    "roles/run.developer"
 
+echo "== Cloud Run invoke (CI smoke gọi service PRIVATE bằng identity token — Phase 6, chỉ staging) =="
+# Fork B: deploy CI ra service private (run.developer không set public được). Smoke cổng-cứng
+# (cụm 6.3) gọi service bằng identity token của chính deployer SA → SA cần run.invoker.
+# Cấp CẤP PROJECT để khỏi vướng thứ tự (service chưa tồn tại lúc chạy IAM). Chỉ 'invoke', không admin.
+# prod KHÔNG cần: smoke prod chạy tay bằng owner sau allow-public.
+grant_project "${SA_CI_DEPLOYER_STAGING}" "roles/run.invoker"
+
 echo "== CI actAs runtime SA tương ứng =="
 grant_act_as "${SA_CI_DEPLOYER_STAGING}" "${SA_API_READER_STAGING}"
 grant_act_as "${SA_CI_DEPLOYER_PROD}"    "${SA_API_READER_PROD}"
