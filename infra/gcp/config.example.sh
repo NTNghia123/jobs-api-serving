@@ -55,3 +55,8 @@ export REDIS_INSTANCE="jobs-cache"
 export REDIS_TIER="basic"                        # basic = rẻ nhất (1 node, không HA)
 export REDIS_SIZE_GB="1"
 export VPC_NETWORK="default"
+
+# --- Backup Mongo → GCS (Phase 7 — 80-backup-gcs.sh; fork B: writer = sa-dagster-elt objectCreator) ---
+export BACKUP_BUCKET=""                           # trống → script tự đặt "${PROJECT_ID}-mongo-backup" (tên bucket TOÀN CẦU duy nhất)
+export BACKUP_RETENTION_DAYS="30"                 # lifecycle: xoá object cũ hơn N ngày
+export SA_BACKUP_RESTORE="sa-backup-restore"      # identity RIÊNG để restore (objectViewer), tách khỏi writer

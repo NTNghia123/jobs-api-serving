@@ -54,6 +54,7 @@ nano config.sh      # hoặc dùng editor Cloud Shell
 | WIF | `bash 50-wif.sh` | Workload Identity Federation cho GitHub Actions |
 | Budget | `bash 70-budget.sh` | Cảnh báo chi phí 50/80/100% (nên chạy sớm) |
 | Redis *(tuỳ chọn, tốn phí)* | `CONFIRM_REDIS=1 bash 60-networking-redis.sh` | Memorystore Redis — CHỈ khi cần demo |
+| Backup *(Phase 7)* | `bash 80-backup-gcs.sh` | Bucket backup Mongo (lifecycle) + writer objectCreator + restore SA |
 | Dọn dẹp | `bash 99-teardown.sh redis` | Xoá Redis khi hết demo (bảo vệ credit) |
 
 Mỗi script in **PROJECT / REGION** ở đầu — nhìn kỹ trước khi để nó chạy tiếp, tránh nhầm project.

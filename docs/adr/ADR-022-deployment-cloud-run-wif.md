@@ -66,3 +66,24 @@ Khi hiện thực Cloud Run + CI/CD, các nhánh lựa chọn được chốt nh
 - **Runtime hardening:** chạy dưới `sa-api-reader-{env}`; secrets nạp qua `--set-secrets` (pin
   version), KHÔNG `GOOGLE_APPLICATION_CREDENTIALS`; cost guard `--max-instances` + `--cpu/--memory/
   --concurrency/--timeout` (Cloud Run 25s > request 20s > query 10s).
+
+## Phase 7 — VM ops + backup (bổ sung 2026-09-13)
+
+VM chạy Mongo + scraper + Dagster + ELT (runbook: `migrate-report/phase-7/`; script: repo
+`job-scraper-1` `deploy/` + serving-api `infra/gcp/80-backup-gcs.sh`):
+
+- **(1A) Mongo trên VM = container** qua `docker-compose.mongo.yml` (chỉ mongo), bind **`127.0.0.1`**
+  (không expose), fail-fast `${MONGO_ROOT_PASSWORD:?}`. `mongo-init.js` bỏ hard-code — reader user
+  chỉ tạo khi có `MONGO_READER_*` (secret-hoá).
+- **(2B) Dagster = 2 systemd unit** `dagster-webserver` (UI bind 127.0.0.1) + `dagster-daemon`;
+  instance `QueuedRunCoordinator` + op-concurrency pool `serving_pipeline=1` (`dagster.yaml`).
+- **(B) Backup writer = `sa-dagster-elt` với CHỈ `objectCreator`** (tạo-chỉ → backup bất biến),
+  **không impersonation** (đúng ADR "VM trusted boundary"); **restore identity riêng**
+  `sa-backup-restore` (`objectViewer`). Bucket **chỉ lifecycle** (xoá > N ngày), **không
+  retention-lock** (giai đoạn thử nghiệm), `public-access-prevention` + uniform access; mã hoá
+  at-rest mặc định (CMEK để [SAU]). Backup tên **immutable** theo timestamp UTC, daily qua systemd
+  timer; restore vào **DB tạm** (không đè prod).
+- **Bí mật ngoài git:** `.env`/`.env.*` ignored + `.env.example` committed; compose committed
+  (không còn chứa mật khẩu); session-state (`storage-state.json`…) đã ignore từ trước.
+- **Firewall:** Mongo (27017) + Dagster UI (3000) bind localhost; `ufw` opt-in (`CONFIRM_UFW=1`);
+  không mở 27017/3000 ra internet (xem UI qua SSH tunnel).

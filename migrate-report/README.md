@@ -554,10 +554,15 @@ Chúng phụ thuộc schema cũ (`country`, numeric `job_id`, `years_exp`, salar
 - CI/CD GitHub Actions + WIF (deploy staging tự động), smoke cổng cứng qua identity token.
 - Public access tối thiểu quyền (`allow-public.sh`), memory-first + toggle Redis/VPC egress.
 
-### Phase 7–8
+### Phase 7
 
-- VM operations, backup/restore.
-- Nguồn tuyển dụng và tính năng mở rộng sau.
+- Báo cáo tổng quan + runbook VM/backup: [`phase-7/README.md`](phase-7/README.md).
+- Provisioning VM (Mongo container, Dagster 2 systemd unit), compose tách + hardening bí mật.
+- Backup mongodump→GCS (writer objectCreator bất biến, restore identity riêng) + restore test.
+
+### Phase 8
+
+- Nguồn tuyển dụng và tính năng mở rộng sau (TopCV/ITviec/JobsGo).
 
 ---
 
