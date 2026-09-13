@@ -262,7 +262,7 @@ Biến môi trường cần thiết:
 ```dotenv
 RUN_BQ_INTEGRATION=1
 JOBS_BQ_PROJECT=<gcp-project-id>
-JOBS_BQ_STAGING_DATASET=<dataset-goc>   # test dùng <dataset-goc>_test
+JOBS_BQ_DATASET_STAGING=<dataset-goc>   # test dùng <dataset-goc>_test
 JOBS_BQ_LOCATION=asia-southeast1
 ```
 

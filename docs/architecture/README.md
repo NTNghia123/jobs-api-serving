@@ -1,6 +1,6 @@
 # Jobs Serving API pipeline diagram
 
-- `jobs-serving-api-pipeline.drawio`: editable source for draw.io / diagrams.net.
+- `jobs-serving-api-pipeline.drawio`: draw.io source with two pages. **01 - Exact Preview** matches the rendered reference exactly; **02 - Editable Components** keeps the individual shapes and connectors editable.
 - `jobs-serving-api-pipeline-preview.svg`: quick visual preview of the same layout.
 - `jobs-serving-api-pipeline-preview.png`: rendered preview for viewers that do not display SVG.
 - The diagram follows the repository's current MongoDB → BigQuery migration architecture.

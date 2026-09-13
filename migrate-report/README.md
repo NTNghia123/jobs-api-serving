@@ -1,5 +1,10 @@
 # Migration Report — Phase 0
 
+> **Đây là snapshot lịch sử của Phase 0, không phải runbook cho code hiện tại.** Sau Phase 4,
+> cả `fake`, `bigquery` và `duckdb` đều đã có adapter. Để chạy ngay trên Windows/PowerShell hoặc
+> chọn đúng quy trình local, Docker, DuckDB hay BigQuery, xem
+> [Runbook hiện tại](RUNBOOK-HIEN-TAI.md).
+
 ## 1. Trạng thái
 
 **Phase 0 — Contract & normalized source: hoàn thành, sẵn sàng commit.**
