@@ -77,6 +77,24 @@ def make_batch_metadata(
     )
 
 
+def build_run_metric(meta: BatchMetadata, **extra: object) -> dict[str, object]:
+    """Payload run_metric (thuần) — số liệu 1 dòng cho orchestrator (Dagster runner) đọc."""
+    return {
+        "event": "run_metric",
+        "source_jobs_total": meta.source_jobs_total,
+        "silver_rows": meta.silver_rows,
+        "gold_rows": meta.gold_rows,
+        "quarantined_rows": meta.quarantined_rows,
+        **extra,
+    }
+
+
+def _emit_run_metric(meta: BatchMetadata, **extra: object) -> None:
+    # In JSON 1 dòng ra STDOUT (tách khỏi log ở stderr) để Dagster runner parse thành metadata.
+    import json
+    print(json.dumps(build_run_metric(meta, **extra)), flush=True)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="ELT Mongo → BigQuery (serving).")
     p.add_argument("--environment", required=True, choices=["staging", "prod"],
@@ -128,6 +146,7 @@ def main(argv: list[str] | None = None) -> int:
         from app.elt.serving.checks import run_quality_checks
         report = run_quality_checks(out.silver, out.quarantine, out.gold, batch_id, extracted.counts)
         print(report.summary())
+        _emit_run_metric(meta, dry_run=1, checks_ok=int(report.ok))
         return 0 if report.ok else 3
 
     try:
@@ -144,6 +163,7 @@ def main(argv: list[str] | None = None) -> int:
              action.value, batch_id, args.crawl_batch_id, args.dagster_run_id)
     if action is PublishAction.NO_OP:
         log.info("NO_OP — batch đã publish & đang là current, không làm gì.")
+    _emit_run_metric(meta, action=action.value)
     return 0
 
 

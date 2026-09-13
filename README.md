@@ -6,7 +6,8 @@ Trạng thái: **Migration Mongo → BigQuery — Phase 4 (khôi phục DuckDB b
 
 Báo cáo triển khai: [Phase 1 — GCP foundation](migrate-report/phase-1/README.md) ·
 [Phase 2 — ELT MongoDB → BigQuery](migrate-report/phase-2/README.md) ·
-[Phase 3 — BigQuery read adapter](migrate-report/phase-3/README.md).
+[Phase 3 — BigQuery read adapter](migrate-report/phase-3/README.md) ·
+[Phase 4 — DuckDB parity và kiểm chứng BigQuery](migrate-report/phase-4/README.md).
 
 ---
 

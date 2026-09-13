@@ -7,6 +7,7 @@ import pytest
 
 from app.elt.serving.run_serving_elt import (
     _build_parser,
+    build_run_metric,
     make_batch_metadata,
     transform,
 )
@@ -26,6 +27,18 @@ def test_transform_splits_silver_quarantine_and_builds_gold():
     assert len(out.quarantine) == len(fx.QUARANTINED)
     assert out.gold, "gold phải có dòng"
     assert all(r.batch_id == BATCH for r in out.silver)
+
+
+def test_build_run_metric_payload():
+    out = transform(_records(), BATCH, AS_OF)
+    meta = make_batch_metadata(BATCH, datetime(2026, 9, 1, tzinfo=UTC), AS_OF,
+                               {"topdev": 1, "vietnamworks": 1}, out)
+    m = build_run_metric(meta, action="new_batch")
+    assert m["event"] == "run_metric"                    # Dagster runner nhận diện
+    assert m["silver_rows"] == len(out.silver)
+    assert m["gold_rows"] == len(out.gold)
+    assert m["quarantined_rows"] == len(out.quarantine)
+    assert m["action"] == "new_batch"
 
 
 def test_make_batch_metadata_reconciles_and_sets_versions():

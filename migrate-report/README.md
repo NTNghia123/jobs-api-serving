@@ -538,6 +538,7 @@ Chúng phụ thuộc schema cũ (`country`, numeric `job_id`, `years_exp`, salar
 
 ### Phase 4
 
+- Báo cáo tổng quan, parity và hướng dẫn kiểm chứng: [`phase-4/README.md`](phase-4/README.md).
 - Khôi phục DuckDB theo schema mới.
 - Fake/DuckDB/BigQuery parity tests.
 - Injection tests theo filters mới.
