@@ -4,7 +4,7 @@ KHÔNG dựng bigquery.Client — current_batch()/market_metrics() I/O để int
 """
 from __future__ import annotations
 
-from app.infrastructure.warehouse.bigquery_metrics import to_metric_row
+from app.infrastructure.warehouse.read_mapping import to_metric_row
 
 
 def test_to_metric_row_giu_so_that():

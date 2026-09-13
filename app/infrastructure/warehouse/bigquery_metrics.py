@@ -10,8 +10,6 @@ Phần I/O test thật lên BQ ở Phase 4 (RUN_BQ_INTEGRATION=1).
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
-
 from google.cloud import bigquery
 
 from app.domain.ports.metrics_repository import BatchRef, MetricRow, MetricsRepository
@@ -22,17 +20,7 @@ from app.infrastructure.warehouse.bigquery_read_sql import (
     build_current_batch_meta_sql,
     build_metrics_sql,
 )
-
-
-def to_metric_row(row: Mapping[str, object]) -> MetricRow:
-    """Một Row/dict gold → MetricRow THÔ (chưa che median — k-anon áp ở handler)."""
-    return MetricRow(
-        dimension_value=row["dimension_value"],
-        posting_count=row["posting_count"],
-        salary_disclosed_count=row["salary_disclosed_count"],
-        salary_sample_count=row["salary_sample_count"],
-        median_salary_vnd_month=row["median_salary_vnd_month"],
-    )
+from app.infrastructure.warehouse.read_mapping import to_metric_row
 
 
 class BigQueryMetricsRepository(MetricsRepository):

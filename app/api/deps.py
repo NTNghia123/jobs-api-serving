@@ -1,9 +1,10 @@
 """Dependency injection.
 
 [FILE SỬA]  Đích thật: app/api/deps.py
-Composition root: chỗ DUY NHẤT ráp adapter cho các port. Migration Phase 0: chỉ backend
-'fake' khả dụng; 'bigquery' (Phase 3) / 'duckdb' (Phase 4) bị từ chối fail-fast ở settings
-(và nhánh phòng thủ dưới đây). Handler/models/domain không phụ thuộc adapter cụ thể (ADR-003/018).
+Composition root: chỗ DUY NHẤT ráp adapter cho các port. Ba backend: 'fake' (test),
+'bigquery' (prod, Phase 3), 'duckdb' (dev, Phase 4) — chọn qua warehouse_backend (settings
+fail-fast nếu giá trị lạ). Adapter bigquery/duckdb import LAZY (chỉ khi được chọn) để 'fake'
+không kéo google-cloud-bigquery/DuckDB. Handler/models/domain không phụ thuộc adapter cụ thể (ADR-003/018).
 
 FastAPI's Depends cho phép đổi hiện thực mà không sửa handler.
 
@@ -34,25 +35,22 @@ from app.infrastructure.warehouse.fake_jobs import FakeJobRepository
 from app.infrastructure.warehouse.fake_metrics import FakeMetricsRepository
 from app.settings import get_settings
 
-# DuckDB tạm tắt trong migration (schema silver đổi sang BigQuery). Phase 4 khôi phục parity.
-_DUCKDB_DISABLED = (
-    "warehouse_backend='duckdb' tạm không hỗ trợ trong migration; dùng 'fake' "
-    "('bigquery' khả dụng ở Phase 3, 'duckdb' khôi phục ở Phase 4)."
-)
 
-
-# Import bigquery lazily (chỉ khi backend=bigquery) — tránh kéo google-cloud-bigquery/ADC
-# khi chạy 'fake' (test). target_key = tuple hashable khớp thứ tự tham số ReadTarget.
+# Import backend lazily (chỉ khi được chọn) — tránh kéo google-cloud-bigquery/ADC hay
+# mở file DuckDB khi chạy 'fake' (test). target_key = tuple hashable khớp thứ tự ReadTarget.
 @lru_cache
-def _build_repository(backend: str, target_key: tuple, query_timeout_s: int) -> JobRepository:
+def _build_repository(
+    backend: str, target_key: tuple, duckdb_path: str, query_timeout_s: int,
+) -> JobRepository:
     if backend == "fake":
         return FakeJobRepository()
     if backend == "bigquery":                                # ★ Phase 3
         from app.infrastructure.warehouse.bigquery_jobs import BigQueryJobRepository
         from app.infrastructure.warehouse.bigquery_read_sql import ReadTarget
         return BigQueryJobRepository(ReadTarget(*target_key), query_timeout_s=query_timeout_s)
-    if backend == "duckdb":                                  # ★ TẠM TẮT trong migration (Phase 4 khôi phục)
-        raise RuntimeError(_DUCKDB_DISABLED)
+    if backend == "duckdb":                                  # ★ Phase 4 (dev)
+        from app.infrastructure.warehouse.duckdb_jobs import DuckDBJobRepository
+        return DuckDBJobRepository(duckdb_path, query_timeout_s=query_timeout_s)
     raise RuntimeError(f"warehouse_backend chưa được hỗ trợ: {backend}")
 
 
@@ -60,27 +58,32 @@ def get_repository() -> JobRepository:
     s = get_settings()
     # target_key là tuple hashable (cho lru_cache) khớp thứ tự tham số ReadTarget.
     target_key = (s.bq_project, s.bq_dataset, s.bq_location, s.bq_maximum_bytes_billed)
-    return _build_repository(s.warehouse_backend, target_key, s.query_timeout_s)
+    return _build_repository(s.warehouse_backend, target_key, s.duckdb_path, s.query_timeout_s)
 
 
 # ★ THÊM Ở TUẦN 5 — repository đọc gold table chỉ số thị trường.
 @lru_cache
-def _build_metrics_repository(backend: str, target_key: tuple, query_timeout_s: int) -> MetricsRepository:
+def _build_metrics_repository(
+    backend: str, target_key: tuple, duckdb_path: str, query_timeout_s: int,
+) -> MetricsRepository:
     if backend == "fake":
         return FakeMetricsRepository()
     if backend == "bigquery":                                # ★ Phase 3
         from app.infrastructure.warehouse.bigquery_metrics import BigQueryMetricsRepository
         from app.infrastructure.warehouse.bigquery_read_sql import ReadTarget
         return BigQueryMetricsRepository(ReadTarget(*target_key), query_timeout_s=query_timeout_s)
-    if backend == "duckdb":
-        raise RuntimeError(_DUCKDB_DISABLED)   # ★ TẠM TẮT trong migration (Phase 4 khôi phục)
+    if backend == "duckdb":                                  # ★ Phase 4 (dev)
+        from app.infrastructure.warehouse.duckdb_metrics import DuckDBMetricsRepository
+        return DuckDBMetricsRepository(duckdb_path, query_timeout_s=query_timeout_s)
     raise RuntimeError(f"warehouse_backend chưa được hỗ trợ: {backend}")
 
 
 def get_metrics_repository() -> MetricsRepository:
     s = get_settings()
     target_key = (s.bq_project, s.bq_dataset, s.bq_location, s.bq_maximum_bytes_billed)
-    return _build_metrics_repository(s.warehouse_backend, target_key, s.query_timeout_s)
+    return _build_metrics_repository(
+        s.warehouse_backend, target_key, s.duckdb_path, s.query_timeout_s,
+    )
 
 
 # ★ THÊM Ở TUẦN 5 — cache đổi được giữa in-memory (cachetools) và Redis (ADR-009).

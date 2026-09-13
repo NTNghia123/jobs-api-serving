@@ -1,37 +1,36 @@
-"""Adapter: đọc gold table chỉ số thị trường từ DuckDB (hiện thực MetricsRepository).
+"""Adapter: đọc gold_market_metrics từ DuckDB (hiện thực MetricsRepository) — schema MỚI.
 
-Trước refactor: một phần của app/warehouse/metrics.py. Xem docs/adr/ADR-011.
+Mirror BigQueryMetricsRepository: current_batch() (state × batches) + market_metrics theo
+batch/window/dimension. Gold giữ SỐ THẬT; k-anon che median áp ở handler. Map row dùng chung
+read_mapping. Khôi phục ở Phase 4. Xem docs/adr/ADR-011, ADR-020.
 """
 from __future__ import annotations
 
-from datetime import UTC
-
 import duckdb
 
-from app.domain.ports.metrics_repository import MetricRow, MetricsRepository
-from app.infrastructure.warehouse._duckdb_timeout import execute_with_timeout  # ★ TUẦN 7
+from app.domain.ports.metrics_repository import BatchRef, MetricRow, MetricsRepository
+from app.infrastructure.warehouse.duckdb_exec import DuckDBReader
+from app.infrastructure.warehouse.duckdb_read_sql import build_metrics_sql
+from app.infrastructure.warehouse.read_mapping import to_metric_row
 
 
 class DuckDBMetricsRepository(MetricsRepository):
-    # Chỉ SELECT cột cần (không SELECT *). 'dimension' là GIÁ TRỊ → đi qua tham số.
-    _SQL = (
-        "SELECT dimension_value, median_salary, posting_count, as_of "
-        "FROM gold_market_metrics WHERE dimension = $dimension "
-        "ORDER BY dimension_value"
-    )
+    def __init__(
+        self,
+        path: str,
+        *,
+        query_timeout_s: int = 30,
+        connection: duckdb.DuckDBPyConnection | None = None,
+        reader: DuckDBReader | None = None,
+    ):
+        self._reader = reader or DuckDBReader(
+            path, query_timeout_s=query_timeout_s, connection=connection,
+        )
 
-    def __init__(self, path: str, query_timeout_s: int = 30):   # ★ TUẦN 7: trần thời gian truy vấn
-        self._con = duckdb.connect(path, read_only=True)   # API chỉ đọc kho
-        self._timeout_s = query_timeout_s
+    def current_batch(self) -> BatchRef:
+        batch_id, as_of = self._reader.current_batch()
+        return BatchRef(batch_id=batch_id, as_of=as_of)
 
-    def market_metrics(self, dimension: str) -> list[MetricRow]:
-        cur = self._con.cursor()
-        # ★ TUẦN 7: chạy có trần thời gian (interrupt khi quá hạn -> QueryTimeoutError 504).
-        _desc, fetched = execute_with_timeout(cur, self._SQL, {"dimension": dimension}, self._timeout_s)
-        rows = []
-        for dv, ms, pc, ao in fetched:
-            # gold lưu as_of dạng naive; gắn UTC để response nhất quán với các endpoint khác.
-            if ao is not None and ao.tzinfo is None:
-                ao = ao.replace(tzinfo=UTC)
-            rows.append(MetricRow(dv, ms, pc, ao))
-        return rows
+    def market_metrics(self, dimension: str, window: str, batch_id: str) -> list[MetricRow]:
+        sql, params = build_metrics_sql(dimension, window, batch_id)
+        return [to_metric_row(r) for r in self._reader.run(sql, params)]

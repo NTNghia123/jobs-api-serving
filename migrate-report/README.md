@@ -530,6 +530,7 @@ Chúng phụ thuộc schema cũ (`country`, numeric `job_id`, `years_exp`, salar
 
 ### Phase 3
 
+- Báo cáo tổng quan, vận hành và checklist tích hợp: [`phase-3/README.md`](phase-3/README.md).
 - BigQuery job/metrics repositories.
 - Named query parameters, keyset SQL và `LIMIT + 1`.
 - Batch-aware metadata/page token/cache key.

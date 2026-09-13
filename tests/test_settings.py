@@ -1,6 +1,6 @@
-"""Test fail-fast backend + cấu hình BigQuery (Phase 3).
+"""Test fail-fast backend + cấu hình BigQuery.
 
-'fake' và 'bigquery' khả dụng; 'duckdb' tạm tắt (Phase 4); giá trị lạ bị chặn ở boot.
+'fake', 'bigquery', 'duckdb' đều khả dụng; giá trị lạ bị chặn ở boot.
 backend=bigquery mà thiếu project/dataset → KHÔNG boot.
 """
 import pytest
@@ -10,6 +10,11 @@ from app.settings import Settings
 
 def test_fake_duoc_chap_nhan():
     assert Settings(warehouse_backend="fake").warehouse_backend == "fake"
+
+
+def test_duckdb_duoc_chap_nhan():
+    # Phase 4: duckdb khôi phục (dev). duckdb_path có default → boot được không cần đặt thêm.
+    assert Settings(warehouse_backend="duckdb").warehouse_backend == "duckdb"
 
 
 def test_bigquery_du_config_duoc_chap_nhan():
@@ -39,15 +44,9 @@ def test_fake_khong_can_bq_config():
     assert Settings(warehouse_backend="fake").bq_project == ""
 
 
-@pytest.mark.parametrize(
-    "backend, fragment",
-    [
-        ("duckdb", "Phase 4"),          # tạm tắt
-        ("postgres", "không hỗ trợ"),   # giá trị lạ
-    ],
-)
-def test_backend_chua_kha_dung_bi_chan_o_boot(backend, fragment):
+@pytest.mark.parametrize("backend", ["postgres", "mysql", "opensearch"])
+def test_backend_la_bi_chan_o_boot(backend):
     with pytest.raises(ValueError) as e:
         Settings(warehouse_backend=backend)
     msg = str(e.value)
-    assert fragment in msg and "fake" in msg   # thông báo rõ + gợi ý fake
+    assert "không hỗ trợ" in msg and "fake" in msg   # thông báo rõ + gợi ý backend hợp lệ

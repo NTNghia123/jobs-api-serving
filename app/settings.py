@@ -12,8 +12,8 @@ from functools import lru_cache
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Backend kho khả dụng theo giai đoạn migration. Phase 3 thêm 'bigquery'; Phase 4 thêm 'duckdb'.
-_AVAILABLE_BACKENDS: frozenset[str] = frozenset({"fake", "bigquery"})
+# Backend kho khả dụng. Migration: fake (test) + bigquery (prod, Phase 3) + duckdb (dev, Phase 4).
+_AVAILABLE_BACKENDS: frozenset[str] = frozenset({"fake", "bigquery", "duckdb"})
 
 
 # ★ THÊM Ở TUẦN 6 — một bản ghi key: server CHỈ lưu hash + hạn dùng, không lưu key thô.
@@ -48,8 +48,8 @@ class Settings(BaseSettings):
         description="Khoá HMAC ký page_token. PROD phải lấy từ Secret Manager.",
     )
 
-    # --- backend kho dữ liệu --- (migration: 'fake'+'bigquery' khả dụng; duckdb khôi phục Phase 4)
-    warehouse_backend: str = Field(default="fake", description="fake (test) | bigquery (prod) | duckdb (Phase 4)")
+    # --- backend kho dữ liệu --- (fake=test, bigquery=prod, duckdb=dev)
+    warehouse_backend: str = Field(default="fake", description="fake (test) | bigquery (prod) | duckdb (dev)")
 
     # ★ MIGRATION (Phase 3) — cấu hình BigQuery read adapter (tầng API CHỈ đọc BQ).
     # LƯU Ý: KHÔNG có mongo_url ở đây — API không chạm Mongo (config ELT ở ENV riêng
@@ -133,10 +133,9 @@ class Settings(BaseSettings):
         # Migration mở dần: 'fake'+'bigquery' khả dụng; 'duckdb' khôi phục ở Phase 4.
         if v in _AVAILABLE_BACKENDS:
             return v
-        msg = {
-            "duckdb": "warehouse_backend='duckdb' TẠM tắt trong migration — khôi phục ở Phase 4.",
-        }.get(v, f"warehouse_backend='{v}' không hỗ trợ.")
-        raise ValueError(f"{msg} Hiện dùng được 'fake' hoặc 'bigquery'.")
+        raise ValueError(
+            f"warehouse_backend='{v}' không hỗ trợ. Dùng được 'fake', 'bigquery' hoặc 'duckdb'."
+        )
 
     @model_validator(mode="after")
     def _require_bq_config_when_bigquery(self):

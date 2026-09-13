@@ -10,11 +10,8 @@ from datetime import UTC, date, datetime
 import pytest
 
 from app.infrastructure.warehouse.bigquery_exec import to_bq_params
-from app.infrastructure.warehouse.bigquery_jobs import (
-    build_next_cursor,
-    to_job_item,
-)
 from app.infrastructure.warehouse.bigquery_read_sql import QueryParam
+from app.infrastructure.warehouse.read_mapping import build_next_cursor, to_job_item
 from app.models.enums import SortOption
 
 
