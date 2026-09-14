@@ -10,19 +10,15 @@ source ./lib.sh
 
 show_target
 ensure_project
+require_cmd bq python3
 
 create_dataset() {
   local ds="$1" env="$2"
   local fq="${PROJECT_ID}:${ds}"
   if bq --project_id="${PROJECT_ID}" show --dataset "${fq}" >/dev/null 2>&1; then
-    # kiểm location khớp (cảnh báo nếu lệch — không tự sửa được)
-    local loc; loc="$(bq --project_id="${PROJECT_ID}" --format=json show --dataset "${fq}" \
-      | python3 -c 'import sys,json;print(json.load(sys.stdin)["location"])' 2>/dev/null || echo "?")"
-    if [[ "${loc}" != "${BQ_LOCATION}" ]]; then
-      warn "Dataset ${ds} đã tồn tại nhưng location=${loc} ≠ ${BQ_LOCATION} (không đổi được — phải xoá & tạo lại nếu muốn khác)."
-    else
-      skip "dataset ${ds} (location ${loc})"
-    fi
+    # ensure_dataset_location (lib.sh): tách lỗi công cụ/quyền khỏi lỗi location; die nếu location lệch.
+    ensure_dataset_location "${ds}"
+    skip "dataset ${ds} (location ${BQ_LOCATION})"
     return
   fi
   log "Tạo dataset ${ds} tại ${BQ_LOCATION}..."

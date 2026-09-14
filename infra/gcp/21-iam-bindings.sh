@@ -18,31 +18,35 @@ source ./lib.sh
 
 show_target
 ensure_project
+require_cmd bq python3
 
 # --- helper: quyền cấp DATASET (BigQuery) ---
 # Dùng access-entry của dataset (đọc → thêm nếu chưa có → cập nhật) — cách chuẩn, mọi bản bq.
 # bqrole: READER = roles/bigquery.dataViewer · WRITER = roles/bigquery.dataEditor.
+# Exit code Python: 0 = đã sửa file (cần update) · 10 = đã có (no-op) · khác = LỖI → die
+# (không gộp lỗi parse/tool vào nhánh "đã có").
 grant_dataset() {
   local sa="$1" bqrole="$2" dataset="$3"
   local email; email="$(sa_email "${sa}")"
   local tmp; tmp="$(mktemp)"
   bq show --format=prettyjson "${PROJECT_ID}:${dataset}" > "${tmp}"
-  if python3 - "${tmp}" "${bqrole}" "${email}" <<'PY'
+  local rc=0
+  python3 - "${tmp}" "${bqrole}" "${email}" <<'PY' || rc=$?
 import json, sys
 path, role, email = sys.argv[1], sys.argv[2], sys.argv[3]
 d = json.load(open(path, encoding="utf-8"))
 acc = d.setdefault("access", [])
 if any(e.get("role") == role and e.get("userByEmail") == email for e in acc):
-    sys.exit(1)  # đã có → không cần update
+    sys.exit(10)  # đã có → không cần update
 acc.append({"role": role, "userByEmail": email})
 json.dump(d, open(path, "w", encoding="utf-8"))
 PY
-  then
-    log "dataset ${dataset}: ${bqrole} → ${sa}"
-    bq update --source "${tmp}" "${PROJECT_ID}:${dataset}" >/dev/null
-  else
-    skip "dataset ${dataset}: ${bqrole} → ${sa}"
-  fi
+  case "${rc}" in
+    0)  log "dataset ${dataset}: ${bqrole} → ${sa}"
+        bq update --source "${tmp}" "${PROJECT_ID}:${dataset}" >/dev/null ;;
+    10) skip "dataset ${dataset}: ${bqrole} → ${sa}" ;;
+    *)  rm -f "${tmp}"; die "grant_dataset: python lỗi (rc=${rc}) trên dataset ${dataset}." ;;
+  esac
   rm -f "${tmp}"
 }
 

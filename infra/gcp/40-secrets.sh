@@ -12,6 +12,9 @@ source ./lib.sh
 
 show_target
 ensure_project
+# Sinh page-token cần openssl HOẶC python3 (openssl ưu tiên, python3 fallback) — không ép cả hai.
+command -v openssl >/dev/null 2>&1 || command -v python3 >/dev/null 2>&1 \
+  || die "Cần 'openssl' HOẶC 'python3' để sinh page-token secret."
 
 # --- tạo secret container (replication automatic) ---
 create_secret() {

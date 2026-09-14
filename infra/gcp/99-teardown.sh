@@ -11,7 +11,7 @@ source ./lib.sh
 
 show_target
 ensure_project
-scope="${1:-plan}"
+scope="${1:-plan}"   # require_cmd bq chỉ cần cho nhánh staging-data (redis/plan chỉ dùng gcloud)
 
 teardown_redis() {
   if gcloud redis instances describe "${REDIS_INSTANCE}" \
@@ -26,6 +26,22 @@ teardown_redis() {
 }
 
 teardown_staging_data() {
+  require_cmd bq python3   # nhánh này cần bq (rm) + python3 (đọc label)
+
+  # GUARD 1: staging PHẢI khác prod — chống cấu hình nhầm trỏ cả hai vào cùng 1 dataset.
+  [[ "${DATASET_STAGING}" != "${DATASET_PROD}" ]] \
+    || die "DATASET_STAGING == DATASET_PROD == '${DATASET_STAGING}' — TỪ CHỐI xoá (chống xoá nhầm prod). Sửa config.sh."
+
+  # GUARD 2: dataset PHẢI có label env=staging (đọc metadata; tách lỗi tool/quyền khỏi trạng thái).
+  local json env_label
+  json="$(bq --project_id="${PROJECT_ID}" --format=json show --dataset "${PROJECT_ID}:${DATASET_STAGING}")" \
+    || die "Không đọc được metadata dataset ${DATASET_STAGING} (credential/network/quyền?) — TỪ CHỐI xoá."
+  env_label="$(printf '%s' "${json}" | python3 -c 'import sys,json;print((json.load(sys.stdin).get("labels") or {}).get("env",""))')" \
+    || die "Không parse được metadata dataset ${DATASET_STAGING} — TỪ CHỐI xoá."
+  [[ "${env_label}" == "staging" ]] \
+    || die "Dataset ${DATASET_STAGING} có label env='${env_label:-<không có>}' ≠ 'staging' — TỪ CHỐI xoá (chỉ xoá dataset staging thật; prod/không nhãn được bảo vệ)."
+
+  # GUARD 3: xác nhận tên (chỉ tới đây sau khi qua 2 guard trên).
   warn "SẮP XOÁ dataset '${DATASET_STAGING}' + TOÀN BỘ bảng trong đó (KHÔNG khôi phục được)."
   printf "Gõ đúng tên dataset để xác nhận [%s]: " "${DATASET_STAGING}"
   read -r ans

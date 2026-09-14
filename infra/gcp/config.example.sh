@@ -17,6 +17,14 @@ export BQ_LOCATION="asia-southeast1"             # PHẢI trùng REGION; KHÔNG 
 export DATASET_STAGING="jobs_staging"
 export DATASET_PROD="jobs_prod"
 
+# --- Looker Studio reporting (Phase Looker — 85/86/87) ---
+export DATASET_REPORTING="jobs_reporting"         # dataset chứa view rpt_* cho Looker (authorized reader của jobs_prod + jobs_prod_logs)
+export DATASET_LOGS="jobs_prod_logs"              # đích của Cloud Logging sink (API metrics); default PARTITION expiration
+export METRICS_MIN_SAMPLE_SIZE="5"               # ngưỡng k-anon median lương — PHẢI khớp app settings metrics_min_sample_size
+export LOG_SINK_NAME="jobs-api-logs-to-bq"       # tên Cloud Logging sink → BigQuery
+export LOG_PARTITION_EXPIRATION_DAYS="90"        # tuổi tối đa 1 partition log (retention; không đặt table expiration)
+export API_REPORT_LOOKBACK_DAYS="90"             # cửa sổ hiển thị của view rpt_api_* (≤ retention để có đủ dữ liệu)
+
 # --- Service accounts (tên ngắn, không kèm @...; script tự ghép email) ---
 export SA_API_READER_STAGING="sa-api-reader-staging"
 export SA_API_READER_PROD="sa-api-reader-prod"
