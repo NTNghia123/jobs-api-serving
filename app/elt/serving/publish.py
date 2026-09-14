@@ -94,6 +94,7 @@ def build_bootstrap_state_sql(target: Target) -> str:
     return (
         f"INSERT INTO {state} (warehouse_name, published_batch_id, updated_at)\n"
         f"SELECT @warehouse_name, NULL, CURRENT_TIMESTAMP()\n"
+        f"FROM (SELECT 1)\n"
         f"WHERE NOT EXISTS (SELECT 1 FROM {state} WHERE warehouse_name = @warehouse_name);"
     )
 

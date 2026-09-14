@@ -96,6 +96,8 @@ def test_sql_uses_backticked_identifiers_and_params_not_values():
 def test_bootstrap_seed_is_conditional():
     sql = build_bootstrap_state_sql(TARGET)
     assert "NOT EXISTS" in sql and "`p.jobs_prod.warehouse_state`" in sql
+    # BigQuery không cho SELECT không có FROM nhưng lại có WHERE.
+    assert "FROM (SELECT 1)" in sql
 
 
 # --- params ---
