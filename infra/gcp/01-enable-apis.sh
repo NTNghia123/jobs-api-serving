@@ -24,13 +24,15 @@ APIS=(
   cloudresourcemanager.googleapis.com
   logging.googleapis.com
   monitoring.googleapis.com
+  telemetry.googleapis.com         # ★ TUẦN 8 — nhận OTLP trace (endpoint telemetry.googleapis.com)
+  cloudtrace.googleapis.com        # ★ TUẦN 8 — lưu/xem trace trên Cloud Trace
 )
 
 log "Bật ${#APIS[@]} API (có thể mất 1–2 phút)..."
 gcloud services enable "${APIS[@]}" --project "${PROJECT_ID}"
 log "Xong. API đã bật:"
 gcloud services list --enabled --project "${PROJECT_ID}" \
-  --filter="config.name:(bigquery OR run OR artifactregistry OR secretmanager OR redis)" \
+  --filter="config.name:(bigquery OR run OR artifactregistry OR secretmanager OR redis OR telemetry OR cloudtrace)" \
   --format="value(config.name)" | sed 's/^/    /'
 
 log "Bước tiếp: bash 10-bigquery-datasets.sh"

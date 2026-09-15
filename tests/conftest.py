@@ -11,6 +11,8 @@ os.environ["JOBS_API_WAREHOUSE_BACKEND"] = "fake"
 os.environ["JOBS_API_CACHE_BACKEND"] = "memory"
 os.environ["JOBS_API_RATE_LIMITER_BACKEND"] = "memory"
 os.environ["JOBS_API_ENV"] = "local"
+# ★ TUẦN 8 — hermetic: ép tắt tracing để test KHÔNG chạm google.auth/mạng dù máy dev đặt otlp.
+os.environ["JOBS_API_OTEL_TRACES_EXPORTER"] = "none"
 
 import pytest
 from fastapi.testclient import TestClient

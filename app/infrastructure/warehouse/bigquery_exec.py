@@ -11,12 +11,17 @@ import time
 from concurrent.futures import TimeoutError as FutureTimeoutError
 
 from google.cloud import bigquery
+from opentelemetry import trace  # ★ THÊM Ở TUẦN 8
 
 from app.errors import QueryTimeoutError
 from app.infrastructure.warehouse.bigquery_read_sql import QueryParam, ReadTarget, SqlAndParams
 from app.observability.logging import log_event
 
 logger = logging.getLogger("warehouse.bigquery")
+
+# ★ TUẦN 8 — cancel là best-effort; GIỚI HẠN thời gian để lỗi timeout không treo response 504
+# thêm (mặc định API BigQuery không đặt trần → có thể chờ rất lâu). Giữ nhỏ để tổng vẫn < Cloud Run 25s.
+_CANCEL_TIMEOUT_S = 5
 
 
 def to_bq_params(params: list[QueryParam]) -> list[bigquery.ScalarQueryParameter]:
@@ -33,28 +38,51 @@ class BigQueryExecutor:
         *,
         query_timeout_s: int = 10,
         client: bigquery.Client | None = None,
+        tracer: trace.Tracer | None = None,   # ★ TUẦN 8 — inject để test không đụng global
     ):
         self.target = target
         self._timeout_s = query_timeout_s
         # ADC — SA reader gắn ở Cloud Run; không JSON key.
         self.client = client or bigquery.Client(project=target.project, location=target.location)
+        # ★ TUẦN 8 — prod: get_tracer trỏ về global provider (configure_tracing set một lần);
+        # test truyền provider.get_tracer(...) để đọc span mà không phụ thuộc global.
+        self._tracer = tracer or trace.get_tracer(__name__)
 
     def run(self, sp: SqlAndParams, *, op: str) -> list[bigquery.table.Row]:
         cfg = bigquery.QueryJobConfig(
             maximum_bytes_billed=self.target.maximum_bytes_billed,
             query_parameters=to_bq_params(sp.params),
         )
-        t0 = time.perf_counter()
-        job = self.client.query(sp.sql, job_config=cfg)
-        try:
-            rows = list(job.result(timeout=self._timeout_s))
-        except FutureTimeoutError as exc:
-            job.cancel()   # ngừng job phía BQ, không để chạy tốn tiền sau khi ta bỏ
-            log_event(logger, logging.WARNING, "bq_query_timeout", op=op,
-                      bq_job_id=job.job_id, timeout_s=self._timeout_s)
-            raise QueryTimeoutError("Truy vấn kho quá hạn") from exc
-        elapsed_ms = round((time.perf_counter() - t0) * 1000, 1)
-        log_event(logger, logging.INFO, "bq_query", op=op, bq_job_id=job.job_id,
-                  total_bytes_billed=job.total_bytes_billed, cache_hit=job.cache_hit,
-                  elapsed_ms=elapsed_ms, rows=len(rows))
-        return rows
+        # ★ TUẦN 8 — span bọc CẢ vòng đời (submit + result). CM mặc định tự record exception
+        # + set status ERROR khi lỗi thoát ra → KHÔNG record thủ công (tránh ghi hai lần).
+        with self._tracer.start_as_current_span("bq.query") as span:
+            span.set_attribute("op", op)               # đặt ngay khi mở span
+            t0 = time.perf_counter()
+            job = self.client.query(sp.sql, job_config=cfg)
+            if job.job_id:                             # bq.job_id NGAY sau submit — để trace timeout vẫn có
+                span.set_attribute("bq.job_id", job.job_id)
+            try:
+                rows = list(job.result(timeout=self._timeout_s))
+            except FutureTimeoutError as exc:
+                span.set_attribute("timeout_s", self._timeout_s)   # đặt TRƯỚC cancel
+                try:
+                    # best-effort, chặn TỔNG thời gian: retry=None (một lần, không retry theo deadline
+                    # ~10 phút mặc định) + timeout per-request → không treo response 504 khi BQ chậm.
+                    job.cancel(retry=None, timeout=_CANCEL_TIMEOUT_S)
+                except Exception:  # noqa: BLE001 — cancel gọi mạng có thể lỗi/quá hạn; KHÔNG được che 504
+                    logger.warning("bq job.cancel() thất bại/quá hạn (bỏ qua)", exc_info=True)
+                log_event(logger, logging.WARNING, "bq_query_timeout", op=op,
+                          bq_job_id=job.job_id, timeout_s=self._timeout_s)
+                raise QueryTimeoutError("Truy vấn kho quá hạn") from exc
+            elapsed_ms = round((time.perf_counter() - t0) * 1000, 1)
+            # attribute kết quả — chỉ đặt khi khác None.
+            if job.total_bytes_billed is not None:
+                span.set_attribute("bq.total_bytes_billed", job.total_bytes_billed)
+            if job.cache_hit is not None:
+                span.set_attribute("bq.cache_hit", job.cache_hit)
+            span.set_attribute("bq.rows", len(rows))
+            span.set_attribute("bq.elapsed_ms", elapsed_ms)
+            log_event(logger, logging.INFO, "bq_query", op=op, bq_job_id=job.job_id,
+                      total_bytes_billed=job.total_bytes_billed, cache_hit=job.cache_hit,
+                      elapsed_ms=elapsed_ms, rows=len(rows))
+            return rows

@@ -1,4 +1,6 @@
-fastapi>=0.115
+# ★ Pin EXACT: instrumentation OTLP (Tuần 8) phụ thuộc cấu trúc route nội bộ của FastAPI
+# (bản 0.141 từng đổi routes → contrib cũ crash). Nâng FastAPI phải cùng nâng/kiểm otel + pip check.
+fastapi==0.141.1
 pydantic>=2.9
 pydantic-settings>=2.5
 uvicorn[standard]>=0.30
@@ -13,3 +15,20 @@ redis>=5.0         # chỉ cần khi JOBS_API_CACHE_BACKEND=redis (cần một R
 # ★ MIGRATION Phase 2 — ELT Mongo → BigQuery (chỉ chặng ELT dùng; API không import)
 pymongo>=4.6       # đọc nguồn MongoDB job_crawler (extract)
 google-cloud-bigquery>=3.25   # load silver/gold + publish transaction
+# ★ TUẦN 8 — tracing (OTLP → Google Telemetry API → Cloud Trace).
+# Pin EXACT một BỘ tương thích ĐÃ CHẠY THỬ: core (sdk/exporter) 1.44.0 đi cùng contrib
+# (instrumentation) 0.65b0. Bản contrib CŨ (0.50b0) crash với FastAPI 0.141+ (_IncludedRouter
+# không có .path). core 1.x và contrib 0.xxb version độc lập → sau cài chạy `python -m pip check`.
+opentelemetry-sdk==1.44.0
+opentelemetry-exporter-otlp-proto-grpc==1.44.0   # OTLP/gRPC exporter
+opentelemetry-instrumentation-fastapi==0.65b0    # auto-span cho FastAPI (contrib)
+# Pin luôn OTel-family transitive (nơi core/contrib dễ lệch version) để TÁI LẬP được:
+opentelemetry-api==1.44.0
+opentelemetry-semantic-conventions==0.65b0
+opentelemetry-exporter-otlp-proto-common==1.44.0
+opentelemetry-proto==1.44.0
+opentelemetry-instrumentation==0.65b0
+opentelemetry-instrumentation-asgi==0.65b0
+opentelemetry-util-http==0.65b0
+google-auth>=2.37                                 # ADC + AuthMetadataPlugin (token tự refresh)
+grpcio>=1.68                                      # channel credentials cho OTLP/gRPC

@@ -21,6 +21,7 @@ from app.observability.logging import (
     get_request_id,
     log_event,
 )
+from app.observability.tracing import configure_tracing  # ★ THÊM Ở TUẦN 8
 from app.settings import get_settings
 
 logger = logging.getLogger("api.error")
@@ -34,7 +35,7 @@ API chỉ-đọc phục vụ dữ liệu tin tuyển dụng cho các hệ thốn
 * `POST /v1/jobs/search` yêu cầu `filters.posted_after` (BẮT BUỘC). Chỉ dùng filter/giá trị có trong `GET /v1/metadata`.
 * `GET /v1/market/metrics` nhận `dimension` (source | seniority | category) và `window` (90d | all_time).
 * `page_token` là chuỗi mờ đã ký: lấy nguyên văn từ response trước, không tự tạo, không sửa.
-* Mọi response đều có `as_of` — hãy kiểm tra độ tươi trước khi hiển thị cho người dùng cuối.
+* Mọi response thành công của `/v1/jobs/search` và `/v1/market/metrics` có `as_of` (`/health` và response lỗi thì không) — hãy kiểm tra độ tươi trước khi hiển thị cho người dùng cuối.
 * API không trả về bất kỳ thông tin cá nhân nào (liên hệ nhà tuyển dụng, dữ liệu ứng viên).
 
 **Khi gặp lỗi**: đọc `error.code` (ổn định, dành cho máy) và gửi kèm `error.request_id` khi báo lỗi.
@@ -58,6 +59,8 @@ def _error_response(status: int, code: str, message: str, field: str | None = No
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_level, settings.log_format)
+    # ★ TUẦN 8 — dựng tracing (singleton cấp process). Trả None khi exporter=none.
+    tracer_provider = configure_tracing(settings)
 
     app = FastAPI(
         title="Jobs Serving API",
@@ -70,6 +73,14 @@ def create_app() -> FastAPI:
     )
 
     app.add_middleware(RequestContextMiddleware)
+
+    # ★ TUẦN 8 — instrument FastAPI SAU RequestContextMiddleware để OTel server span bọc
+    # NGOÀI (access-log trong finally vẫn chạy khi span còn active). Truyền provider tường
+    # minh; exporter=none → không instrument.
+    if tracer_provider is not None:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        FastAPIInstrumentor.instrument_app(app, tracer_provider=tracer_provider)
 
     # ---- Xử lý lỗi: mọi lỗi ra ngoài đều cùng một envelope ----
     @app.exception_handler(AppError)
