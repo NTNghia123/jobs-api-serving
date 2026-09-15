@@ -60,6 +60,16 @@ grant_secret_accessor() {
     --project "${PROJECT_ID}" >/dev/null
 }
 
+# CI chỉ cần đọc METADATA/version id để pin version bất biến khi deploy; viewer không đọc payload.
+grant_secret_viewer() {
+  local sa="$1" secret="$2"
+  log "secretViewer @${secret} → ${sa} (chỉ metadata/version, không đọc payload)"
+  gcloud secrets add-iam-policy-binding "${secret}" \
+    --member="serviceAccount:$(sa_email "${sa}")" \
+    --role="roles/secretmanager.viewer" \
+    --project "${PROJECT_ID}" >/dev/null
+}
+
 echo "== tạo 4 secret =="
 create_secret "${SECRET_API_KEYS_STAGING}"    "staging"
 create_secret "${SECRET_API_KEYS_PROD}"        "prod"
@@ -75,6 +85,10 @@ grant_secret_accessor "${SA_API_READER_STAGING}" "${SECRET_API_KEYS_STAGING}"
 grant_secret_accessor "${SA_API_READER_STAGING}" "${SECRET_PAGE_TOKEN_STAGING}"
 grant_secret_accessor "${SA_API_READER_PROD}"    "${SECRET_API_KEYS_PROD}"
 grant_secret_accessor "${SA_API_READER_PROD}"    "${SECRET_PAGE_TOKEN_PROD}"
+
+echo "== CI staging đọc metadata để chọn version secret (KHÔNG đọc payload) =="
+grant_secret_viewer "${SA_CI_DEPLOYER_STAGING}" "${SECRET_API_KEYS_STAGING}"
+grant_secret_viewer "${SA_CI_DEPLOYER_STAGING}" "${SECRET_PAGE_TOKEN_STAGING}"
 
 warn "api-keys secret đang RỖNG (chưa có version). Trước khi deploy prod, nạp JSON key đã hash:"
 echo "    # sinh key + hash bằng scripts/issue_key.py rồi:"

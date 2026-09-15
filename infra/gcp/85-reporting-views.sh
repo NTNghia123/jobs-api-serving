@@ -108,7 +108,7 @@ log "Tạo/replace các view rpt_* CORE..."
 bq --project_id="${PROJECT_ID}" --location="${BQ_LOCATION}" query \
   --use_legacy_sql=false --quiet < "${RENDERED}"
 log "Đã tạo view. Danh sách:"
-bq --project_id="${PROJECT_ID}" ls --format="value(tableId)" "${DATASET_REPORTING}" | sed 's/^/    /'
+bq --project_id="${PROJECT_ID}" ls --format=pretty "${DATASET_REPORTING}" | sed 's/^/    /'
 
 authorize_dataset_reader "${DATASET_PROD}" "${DATASET_REPORTING}"
 

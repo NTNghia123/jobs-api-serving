@@ -14,12 +14,23 @@ import time
 import uuid
 from contextvars import ContextVar
 
+from opentelemetry import trace  # ★ THÊM Ở TUẦN 8
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
 REQUEST_ID_HEADER = "X-Request-ID"
 _request_id: ContextVar[str] = ContextVar("request_id", default="-")
 _client_id: ContextVar[str] = ContextVar("client_id", default="-")   # ★ THÊM Ở TUẦN 6
+
+# ★ THÊM Ở TUẦN 8 — project id để dựng resource name cho trace (deep-link log↔trace).
+# Formatter không nhận settings; configure_tracing() set giá trị này sau khi resolve project.
+_trace_project_id: str | None = None
+
+
+def set_trace_project_id(project_id: str | None) -> None:
+    """Do configure_tracing() gọi: otlp → project đã resolve; none/console → None."""
+    global _trace_project_id
+    _trace_project_id = project_id
 
 
 def get_request_id() -> str:
@@ -49,6 +60,19 @@ class JsonFormatter(logging.Formatter):
         extra = getattr(record, "extra_fields", None)
         if extra:
             payload.update(extra)                 # field tường minh (vd access-log) ghi đè
+        # ★ THÊM Ở TUẦN 8 — correlate log ↔ trace (chỉ khi có span đang hoạt động).
+        ctx = trace.get_current_span().get_span_context()
+        if ctx.is_valid:
+            trace_id_hex = format(ctx.trace_id, "032x")
+            # Resource name đầy đủ (projects/<pid>/traces/<id>) mới tạo được deep-link trong
+            # Cloud Console; local (chưa có project) → trace id trần, KHÔNG "projects//traces/".
+            payload["logging.googleapis.com/trace"] = (
+                f"projects/{_trace_project_id}/traces/{trace_id_hex}"
+                if _trace_project_id
+                else trace_id_hex
+            )
+            payload["logging.googleapis.com/spanId"] = format(ctx.span_id, "016x")
+            payload["logging.googleapis.com/trace_sampled"] = ctx.trace_flags.sampled
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
         return json.dumps(payload, ensure_ascii=False)

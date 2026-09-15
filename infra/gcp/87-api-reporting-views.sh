@@ -53,7 +53,10 @@ expected_ms=$(( LOG_PARTITION_EXPIRATION_DAYS * 86400 * 1000 ))
 log "Bảng log ${DATASET_LOGS}.${LOG_TABLE} partitioned, expiration ${LOG_PARTITION_EXPIRATION_DAYS}d ✓."
 
 # cảnh báo bảng date-sharded cũ (view API KHÔNG đọc chúng)
-LEGACY="$(bq --project_id="${PROJECT_ID}" ls --format="value(tableId)" "${DATASET_LOGS}" 2>/dev/null \
+LEGACY="$(bq --project_id="${PROJECT_ID}" ls --format=prettyjson "${DATASET_LOGS}" 2>/dev/null \
+  | python3 -c 'import json,sys
+for table in json.load(sys.stdin):
+    print(table["tableReference"]["tableId"])' \
   | grep -E '^run_googleapis_com_stdout_[0-9]{8}$' || true)"
 if [[ -n "${LEGACY}" ]]; then
   warn "Có bảng date-sharded cũ (view API bỏ qua): $(echo "${LEGACY}" | tr '\n' ' ')"

@@ -8,6 +8,7 @@ không nằm rải rác trong code. Xem README mục "Cấu hình".
 """
 from datetime import UTC, datetime
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -49,6 +50,22 @@ class Settings(BaseSettings):
     # --- observability ---
     log_level: str = "INFO"
     log_format: str = Field(default="json", description="json | text (text chỉ dùng khi dev)")
+
+    # ★ THÊM Ở TUẦN 8 — tracing OpenTelemetry.
+    # exporter: none (test/CI hermetic, không instrument) | console (dev) | otlp (Cloud Run → Telemetry API).
+    # Literal → typo bị Settings từ chối ngay khi boot (fail-fast), không âm thầm chạy sai.
+    otel_traces_exporter: Literal["none", "console", "otlp"] = "none"
+    # Tỷ lệ sample (root). Mặc định 0.1; demo/nghiệm thu PHẢI đặt JOBS_API_OTEL_SAMPLING_RATIO=1.0
+    # (0.0 → không span; 0.1 → một lần chạy có thể không được sample).
+    otel_sampling_ratio: float = Field(default=0.1, description="Tỷ lệ sample trace, trong [0.0, 1.0].")
+
+    @field_validator("otel_sampling_ratio")
+    @classmethod
+    def _sampling_ratio_in_range(cls, v: float) -> float:
+        # Ngoài [0,1] → KHÔNG boot (fail-fast); tránh cấu hình sample vô nghĩa.
+        if not (0.0 <= v <= 1.0):
+            raise ValueError("JOBS_API_OTEL_SAMPLING_RATIO phải nằm trong [0.0, 1.0]")
+        return v
 
     # --- phân trang & giới hạn truy vấn ---
     page_token_secret: str = Field(

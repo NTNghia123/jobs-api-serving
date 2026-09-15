@@ -116,7 +116,10 @@ PY
 grant_writer_on_logs "${WRITER_EMAIL}" "${DATASET_LOGS}"
 
 # --- 4) cảnh báo bảng date-sharded cũ (nếu dataset từng nhận log không-partitioned) — KHÔNG tự xoá ---
-LEGACY="$(bq --project_id="${PROJECT_ID}" ls --format="value(tableId)" "${DATASET_LOGS}" 2>/dev/null \
+LEGACY="$(bq --project_id="${PROJECT_ID}" ls --format=prettyjson "${DATASET_LOGS}" 2>/dev/null \
+  | python3 -c 'import json,sys
+for table in json.load(sys.stdin):
+    print(table["tableReference"]["tableId"])' \
   | grep -E '^run_googleapis_com_stdout_[0-9]{8}$' || true)"
 if [[ -n "${LEGACY}" ]]; then
   warn "Phát hiện bảng date-sharded cũ trong ${DATASET_LOGS} (không do sink partitioned tạo):"

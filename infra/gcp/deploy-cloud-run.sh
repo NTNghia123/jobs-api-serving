@@ -89,6 +89,12 @@ env_vars+=",JOBS_API_BQ_PROJECT=${PROJECT_ID}"
 env_vars+=",JOBS_API_BQ_DATASET=${dataset}"
 env_vars+=",JOBS_API_BQ_LOCATION=${BQ_LOCATION}"
 env_vars+=",JOBS_API_BQ_MAXIMUM_BYTES_BILLED=${BQ_MAX_BYTES_BILLED}"
+# ★ TUẦN 8 — tracing OTLP → Telemetry API → Cloud Trace. Override được qua config.sh.
+# Sampling mặc định THẤP (0.1) — prod không trace 100% (tốn chi phí/volume). Nghiệm thu trace
+# KHÔNG cần nâng ratio: smoke TRACE_DEMO gửi traceparent '-01' → ParentBased ép sample bất kể ratio.
+# Chỉ đặt OTEL_SAMPLING_RATIO=1.0 khi thực sự muốn trace toàn bộ (vd staging điều tra).
+env_vars+=",JOBS_API_OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-otlp}"
+env_vars+=",JOBS_API_OTEL_SAMPLING_RATIO=${OTEL_SAMPLING_RATIO:-0.1}"
 
 # --- 8) fork 3A: memory-first; WITH_REDIS=1 mới bật Redis + Direct VPC egress ---
 vpc_flags=()

@@ -82,6 +82,14 @@ grant_project "${SA_API_READER_STAGING}" "roles/bigquery.jobUser"
 grant_project "${SA_API_READER_PROD}"    "roles/bigquery.jobUser"
 grant_project "${SA_DAGSTER_ELT}"        "roles/bigquery.jobUser"
 
+echo "== ★ TUẦN 8: reader SA gửi OTLP trace → Telemetry API → Cloud Trace =="
+# tracesWriter = quyền GHI trace; serviceUsageConsumer = quyền tiêu quota project khi gọi Telemetry API
+# (yêu cầu prerequisites OTLP của Google). Cấp cho cả staging + prod runtime SA.
+grant_project "${SA_API_READER_STAGING}" "roles/telemetry.tracesWriter"
+grant_project "${SA_API_READER_PROD}"    "roles/telemetry.tracesWriter"
+grant_project "${SA_API_READER_STAGING}" "roles/serviceusage.serviceUsageConsumer"
+grant_project "${SA_API_READER_PROD}"    "roles/serviceusage.serviceUsageConsumer"
+
 echo "== Cloud Run deploy (CI) =="
 grant_project "${SA_CI_DEPLOYER_STAGING}" "roles/run.developer"
 grant_project "${SA_CI_DEPLOYER_PROD}"    "roles/run.developer"

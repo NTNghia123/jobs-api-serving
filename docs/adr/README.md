@@ -60,6 +60,7 @@ bối cảnh, phương án đã chọn, các phương án bị loại, và hệ 
 | [ADR-024](ADR-024-salary-normalization.md) | Salary: đơn vị suy từ raw, FX 25.500 versioned, one-sided, trần sanity 10 tỷ | Migration | Đã chấp nhận |
 | [ADR-025](ADR-025-atomic-publication.md) | Atomic publication: state+batches, CAS trong transaction, state machine, rollback | Migration | Đã chấp nhận |
 | ADR-026 · Pagination snapshot | page token gắn batch, 410 expired, cache key gắn batch | Migration | **Kế hoạch (chưa tạo)** |
+| [ADR-027](ADR-027-opentelemetry-otlp-cloud-trace.md) | Tracing OpenTelemetry: export OTLP → Telemetry API → Cloud Trace, singleton provider, correlate log↔trace | 8 | Đã chấp nhận |
 
 > Chỉ mục xếp theo tuần/giai đoạn ra quyết định. ADR-020..026 được tham chiếu trong plan/ADR khác nhưng
 > **chưa tạo file** — sẽ viết ở đúng phase migration tương ứng.
