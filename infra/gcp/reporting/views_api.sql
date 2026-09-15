@@ -23,7 +23,7 @@ SELECT
   jsonPayload.method                          AS method,
   jsonPayload.path                            AS path,
   CAST(jsonPayload.status AS INT64)           AS status,
-  CAST(jsonPayload.status AS INT64) DIV 100   AS status_class,   -- 2/4/5
+  DIV(CAST(jsonPayload.status AS INT64), 100) AS status_class,   -- 2/4/5
   jsonPayload.latency_ms                      AS latency_ms,
   jsonPayload.client_id                       AS client_id,
   jsonPayload.request_id                      AS request_id
@@ -49,9 +49,9 @@ CREATE OR REPLACE VIEW `__PROJECT__.__DS_RPT__.rpt_api_cache_events` AS
 SELECT
   timestamp                       AS event_ts,
   jsonPayload.dimension           AS dimension,
-  jsonPayload.window              AS window,
+  jsonPayload.`window`            AS `window`,
   jsonPayload.cache               AS cache,        -- 'hit' | 'miss'
-  CAST(jsonPayload.groups AS INT64) AS groups,
+  CAST(jsonPayload.`groups` AS INT64) AS `groups`,
   jsonPayload.client_id           AS client_id
 FROM `__PROJECT__.__DS_LOGS__.run_googleapis_com_stdout`
 WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL __LOG_LOOKBACK_DAYS__ DAY)
