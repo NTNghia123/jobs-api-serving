@@ -221,7 +221,7 @@ def build_metrics_sql(
         "SELECT dimension_value, posting_count, salary_disclosed_count,\n"
         "       salary_sample_count, median_salary_vnd_month\n"
         f"FROM {target.table_id(TABLE_GOLD)}\n"
-        "WHERE batch_id = @batch_id AND window = @window AND dimension = @dimension"
+        "WHERE batch_id = @batch_id AND `window` = @window AND dimension = @dimension"
     )
     return SqlAndParams(sql, [
         QueryParam("batch_id", "STRING", batch_id),

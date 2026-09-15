@@ -174,7 +174,8 @@ def test_current_batch_meta_sql():
 def test_metrics_sql():
     sp = build_metrics_sql(TARGET, "source", "90d", "b1")
     assert "`my-proj.jobs_prod.gold_market_metrics`" in sp.sql
-    assert "WHERE batch_id = @batch_id AND window = @window AND dimension = @dimension" in sp.sql
+    # WINDOW là reserved keyword của GoogleSQL, nên tên cột phải được quote bằng backtick.
+    assert "WHERE batch_id = @batch_id AND `window` = @window AND dimension = @dimension" in sp.sql
     assert "median_salary_vnd_month" in sp.sql   # gold giữ số thật; API mới che
     p = _pmap(sp.params)
     assert (p["batch_id"].value, p["window"].value, p["dimension"].value) == ("b1", "90d", "source")
