@@ -56,7 +56,7 @@ export RUN_CONCURRENCY="40"                      # số request đồng thời m
 export RUN_TIMEOUT="25"                          # giây; PHẢI > request_timeout_s(20) > query_timeout_s(10)
 
 # --- WIF cho GitHub Actions (điền khi tới cụm 1.5; dạng "owner/repo") ---
-export GITHUB_REPO="tuniiiiii/jobs-serving-api"
+export GITHUB_REPO="NTNghia123/jobs-api-serving"
 
 # --- Memorystore Redis (cụm 1.6 — script sẵn, chạy sau khi cần demo) ---
 export REDIS_INSTANCE="jobs-cache"

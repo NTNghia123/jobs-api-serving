@@ -34,69 +34,69 @@ bash 87-api-reporting-views.sh    # view rpt_api_* + authorize đọc jobs_prod_
 
 ## 2. Các trang & biểu đồ
 
-Ký hiệu: **nguồn** · dimension · metric · loại chart.
+Ký hiệu trong cột **Chi tiết**: **nguồn** · dimension · metric. Cột **Loại biểu đồ** dùng tên chart tương ứng trong Looker Studio.
 
 ### Trang 1 — Tổng quan (showcase)
-| Chart | Chi tiết |
-|---|---|
-| KPI scorecards | `rpt_overview_kpis` · — · `job_count`, `source_count`, `median_salary_trieu`, `salary_disclosed_rate`, `as_of_date` |
-| Cơ cấu nguồn | `rpt_jobs` · `source` · COUNT · donut |
-| Theo cấp bậc | `rpt_jobs` · `seniority` · COUNT · bar |
-| Job qua batch | `rpt_pipeline_batches`\@12h · `published_at` · `silver_rows` · line |
-| Kiến trúc | ảnh `../architecture/jobs-serving-api-pipeline-preview.png` + mô tả |
+| Chart | Chi tiết | Loại biểu đồ |
+|---|---|---|
+| KPI scorecards | `rpt_overview_kpis` · — · `job_count`, `source_count`, `median_salary_trieu`, `salary_disclosed_rate`, `as_of_date` | **Scorecard** (mỗi KPI một scorecard) |
+| Cơ cấu nguồn | `rpt_jobs` · `source` · COUNT | **Donut chart** |
+| Theo cấp bậc | `rpt_jobs` · `seniority` · COUNT | **Bar chart** |
+| Job qua batch | `rpt_pipeline_batches`\@12h · `published_at` · `silver_rows` | **Time series** |
+| Kiến trúc | ảnh `../architecture/jobs-serving-api-pipeline-preview.png` + mô tả | **Image** + **Text** |
 
 ### Trang 2 — Thị trường (một data source: `rpt_jobs_by_category`)
 Controls: `source`, `seniority`, **`category_label`** (hoặc `category_key`), date range trên `effective_posted_date`. Mọi count = `COUNT_DISTINCT(job_id)`.
-| Chart | Chi tiết |
-|---|---|
-| Top 15 ngành | `category_label` · COUNT_DISTINCT(job_id) · horizontal bar |
-| Cấp bậc × nguồn | `seniority` × `source` · COUNT_DISTINCT(job_id) · stacked bar |
-| Xu hướng đăng | `effective_posted_date` (theo tháng) · COUNT_DISTINCT(job_id) · time series *(mật độ tin đăng, không phải "job active")* |
-| Top công ty | `company_name` · COUNT_DISTINCT(job_id) · bar |
-| Bảng chi tiết | title/company/source/seniority/salary/`effective_posted_date`/`deadline_date` · table (link `source_url`) *(view exploded 1 dòng/job×category → job đa ngành lặp dòng; nếu muốn 1 dòng/job dùng `COUNT_DISTINCT` hoặc bảng riêng từ `rpt_jobs`)* |
+| Chart | Chi tiết | Loại biểu đồ |
+|---|---|---|
+| Top 15 ngành | `category_label` · COUNT_DISTINCT(job_id) | **Horizontal bar chart** |
+| Cấp bậc × nguồn | `seniority` × `source` · COUNT_DISTINCT(job_id) | **Stacked bar chart** |
+| Xu hướng đăng | `effective_posted_date` (theo tháng) · COUNT_DISTINCT(job_id) *(mật độ tin đăng, không phải "job active")* | **Time series** |
+| Top công ty | `company_name` · COUNT_DISTINCT(job_id) | **Bar chart** |
+| Bảng chi tiết | title/company/source/seniority/salary/`effective_posted_date`/`deadline_date` · link `source_url` *(view exploded 1 dòng/job×category → job đa ngành lặp dòng; nếu muốn 1 dòng/job dùng `COUNT_DISTINCT` hoặc bảng riêng từ `rpt_jobs`)* | **Table** |
 
 ### Trang 3 — Lương (đơn vị triệu VND/tháng)
 Control cửa sổ `window` (90d ↔ all_time) cho chart gold.
-| Chart | Chi tiết |
-|---|---|
-| Median theo ngành | `rpt_market_metrics` (dimension='category') · `dimension_label` · `median_salary_trieu` · bar. Filter nguồn **chỉ chart này** qua `taxonomy_source` (không page-wide) |
-| Median theo cấp bậc | `rpt_market_metrics` (dimension='seniority') · `dimension_value` · `median_salary_trieu` · bar |
-| Median theo nguồn | `rpt_market_metrics` (dimension='source') · `dimension_value` · `median_salary_trieu` · bar |
-| % công khai lương | `rpt_market_metrics` (**filter `dimension='category'`**) · `dimension_label` · `disclosed_rate` · bar (nếu không filter sẽ trộn cả source/seniority/category) |
-| Khoảng lương | `rpt_jobs` (`has_salary_range=true`) · `seniority` · AVG(`salary_min_trieu`), AVG(`salary_max_trieu`) · bar *(luôn all_time)* |
+| Chart | Chi tiết | Loại biểu đồ |
+|---|---|---|
+| Median theo ngành | `rpt_market_metrics` (dimension='category') · `dimension_label` · `median_salary_trieu`. Filter nguồn **chỉ chart này** qua `taxonomy_source` (không page-wide) | **Bar chart** |
+| Median theo cấp bậc | `rpt_market_metrics` (dimension='seniority') · `dimension_value` · `median_salary_trieu` | **Bar chart** |
+| Median theo nguồn | `rpt_market_metrics` (dimension='source') · `dimension_value` · `median_salary_trieu` | **Bar chart** |
+| % công khai lương | `rpt_market_metrics` (**filter `dimension='category'`**) · `dimension_label` · `disclosed_rate` (nếu không filter sẽ trộn cả source/seniority/category) | **Bar chart** |
+| Khoảng lương | `rpt_jobs` (`has_salary_range=true`) · `seniority` · AVG(`salary_min_trieu`), AVG(`salary_max_trieu`) *(luôn all_time)* | **Grouped bar chart** |
 
 Ghi chú trên trang: median = NULL khi `salary_sample_count < k` (k-anonymity).
 
 ### Trang 4 — Pipeline ELT
-| Chart | Chi tiết |
-|---|---|
-| Scorecards batch hiện tại | `rpt_current_pipeline_batch` · — · `silver_rows`, `quarantined_rows`, `quarantine_rate`, `mapping_version`, `salary_fx_version`, `gold_rows` (nhãn "aggregate rows") |
-| Funnel qua batch | `rpt_pipeline_batches`\@5m · `published_at` · stacked bars `silver_rows`+`quarantined_rows` + line tham chiếu `source_jobs_total` |
-| Quarantine rate | `rpt_pipeline_batches` · `published_at` · `quarantine_rate` (line) trên nền số row (bar) |
-| Nguồn theo batch | `rpt_pipeline_batches` · `published_at` · `topdev_source_jobs` vs `vietnamworks_source_jobs` · stacked bar |
-| gold_rows | `rpt_pipeline_batches` · `published_at` · `gold_rows` · line riêng |
-| Lineage | `rpt_pipeline_batches` · table (`batch_id`, `published_at`, `as_of_date`, counts, `dagster_run_id`, `crawl_batch_id`) |
+| Chart | Chi tiết | Loại biểu đồ |
+|---|---|---|
+| Scorecards batch hiện tại | `rpt_current_pipeline_batch` · — · `silver_rows`, `quarantined_rows`, `quarantine_rate`, `mapping_version`, `salary_fx_version`, `gold_rows` (nhãn "aggregate rows") | **Scorecard** (mỗi metric một scorecard) |
+| Funnel qua batch | `rpt_pipeline_batches`\@5m · `published_at` · stacked bars `silver_rows`+`quarantined_rows` + line tham chiếu `source_jobs_total` | **Combo chart** (stacked bars + line) |
+| Quarantine rate | `rpt_pipeline_batches` · `published_at` · `quarantine_rate` (line) trên nền số row (bar) | **Combo chart** (bar + line) |
+| Nguồn theo batch | `rpt_pipeline_batches` · `published_at` · `topdev_source_jobs` vs `vietnamworks_source_jobs` | **Stacked bar chart** |
+| gold_rows | `rpt_pipeline_batches` · `published_at` · `gold_rows` | **Time series** |
+| Lineage | `rpt_pipeline_batches` · `batch_id`, `published_at`, `as_of_date`, counts, `dagster_run_id`, `crawl_batch_id` | **Table** |
 
 ### Trang 5 — Chất lượng dữ liệu (`rpt_quarantine`)
 Caveat trên trang: chỉ phản ánh quarantine của **batch publish thành công**; run fail quality-gate không xuất hiện (cần Dagster run events — out of scope).
-| Chart | Chi tiết |
-|---|---|
-| Theo lý do | `reason_code` · COUNT · bar |
-| Theo stage | `stage` · COUNT · bar |
-| Theo nguồn | `source` · COUNT · donut |
-| Theo batch | `published_at` · COUNT · time series |
-| Chi tiết | `reason_detail_sanitized` gần đây · table |
+| Chart | Chi tiết | Loại biểu đồ |
+|---|---|---|
+| Theo lý do | `reason_code` · COUNT | **Bar chart** |
+| Theo stage | `stage` · COUNT | **Bar chart** |
+| Theo nguồn | `source` · COUNT | **Donut chart** |
+| Theo batch | `published_at` · COUNT | **Time series** |
+| Chi tiết | `reason_detail_sanitized` gần đây | **Table** |
 
 ### Trang 6 — API serving (sau 86+87; freshness 5m)
-| Chart | Chi tiết |
-|---|---|
-| Request count | `rpt_api_requests` · `event_ts` · COUNT · time series |
-| Latency p50/p95 | `rpt_api_latency_hourly` · `hour_ts` · `p50_latency_ms`, `p95_latency_ms` · time series |
-| Status code | `rpt_api_requests` · `event_ts` × **`status`** · COUNT · stacked bar (breakdown theo mã cụ thể để thấy rõ **429**/**504**; `status_class` chỉ dùng làm filter/nhóm tổng quát) |
-| Cache hit/miss | `rpt_api_cache_events` · `cache` · COUNT · donut |
-| BQ bytes billed | `rpt_api_bq_queries_daily` · `day` · `total_gib_billed` · time series (cost-control) |
-| Top endpoint | `rpt_api_requests` · `path` · COUNT + AVG(`latency_ms`) · table |
-| 429 theo client | `rpt_api_429_by_client` · `client_id` · `rate_limited_count` · bar |
+| Chart | Chi tiết | Loại biểu đồ |
+|---|---|---|
+| Request count | `rpt_api_requests` · `event_ts` · COUNT | **Time series** |
+| Latency p50/p95 | `rpt_api_latency_hourly` · `hour_ts` · `p50_latency_ms`, `p95_latency_ms` | **Time series** (2 lines) |
+| Status code | `rpt_api_requests` · `event_ts` × **`status`** · COUNT (breakdown theo mã cụ thể để thấy rõ **429**/**504**; `status_class` chỉ dùng làm filter/nhóm tổng quát) | **Stacked bar chart** |
+| Cache hit/miss | `rpt_api_cache_events` · `cache` · COUNT | **Donut chart** |
+| BQ bytes billed | `rpt_api_bq_queries_daily` · `day` · `total_gib_billed` (cost-control) | **Time series** |
+| Top endpoint | `rpt_api_requests` · `path` · COUNT + AVG(`latency_ms`) | **Table** |
+| 429 theo client | `rpt_api_429_by_client` · `client_id` · `rate_limited_count` | **Bar chart** |
 
 ## 3. Tham chiếu view (tên cột chính)
 

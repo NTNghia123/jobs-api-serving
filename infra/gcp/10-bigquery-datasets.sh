@@ -34,5 +34,5 @@ create_dataset "${DATASET_STAGING}" "staging"
 create_dataset "${DATASET_PROD}" "prod"
 
 log "Dataset hiện có:"
-bq --project_id="${PROJECT_ID}" ls --datasets --format="value(datasetId)" | sed 's/^/    /'
+bq --project_id="${PROJECT_ID}" ls --datasets --format=pretty | sed 's/^/    /'
 log "Bước tiếp: bash 20-service-accounts.sh"
