@@ -1,0 +1,117 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.7.8 Chrome/128.0.6613.36 Electron/32.0.1 Safari/537.36" compressed="false" version="24.7.8">
+  <diagram id="mongodb-bigquery-schema" name="MongoDB - BigQuery Schema">
+    <mxGraphModel dx="958" dy="626" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1300" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="MONGODB → BIGQUERY • JOBS SERVING DATA MODEL" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=26;fontStyle=1;fontColor=#172B4D;" parent="1" vertex="1">
+          <mxGeometry x="620" y="15" width="1160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="mongo-zone" value="MONGODB • job_crawler&lt;br&gt;&lt;font style=&quot;font-size:12px;font-weight:normal;&quot;&gt;Operational source • embedded documents • camelCase&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F1F8E9;strokeColor=#82B366;strokeWidth=2;dashed=1;verticalAlign=top;align=left;spacingTop=12;spacingLeft=16;fontStyle=1;fontSize=20;fontColor=#274E13;" parent="1" vertex="1">
+          <mxGeometry x="20" y="70" width="700" height="1200" as="geometry" />
+        </mxCell>
+        <mxCell id="bq-zone" value="BIGQUERY • jobs_staging / jobs_prod&lt;br&gt;&lt;font style=&quot;font-size:12px;font-weight:normal;&quot;&gt;Analytical warehouse • snake_case • immutable published batches&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EAF2F8;strokeColor=#5B9BD5;strokeWidth=2;dashed=1;verticalAlign=top;align=left;spacingTop=12;spacingLeft=16;fontStyle=1;fontSize=20;fontColor=#1F4E78;" parent="1" vertex="1">
+          <mxGeometry x="970" y="70" width="1410" height="1200" as="geometry" />
+        </mxCell>
+        <mxCell id="mongo-jobs" value="&lt;div style=&quot;font-size:18px;font-weight:bold;text-align:center;color:#274E13;&quot;&gt;jobs&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;line-height:1.55;&quot;&gt;&lt;b&gt;* platformId&lt;/b&gt; : string&lt;br&gt;&lt;b&gt;* externalId&lt;/b&gt; : string&lt;br&gt;title : string?&lt;br&gt;postedAt : string | date?&lt;br&gt;firstSeenAt : datetime?&lt;br&gt;lastSeenAt : datetime?&lt;br&gt;detailUrl : string?&lt;br&gt;categoryExternalId : string?&lt;br&gt;rawListData : object?&lt;/div&gt;&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;UQ (platformId, externalId)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#548235;strokeWidth=2;align=left;verticalAlign=top;spacing=12;fontSize=13;fontColor=#222222;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="50" y="150" width="270" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="mongo-details" value="&lt;div style=&quot;font-size:18px;font-weight:bold;text-align:center;color:#274E13;&quot;&gt;job_details&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;line-height:1.48;&quot;&gt;&lt;b&gt;* platformId&lt;/b&gt; : string&lt;br&gt;&lt;b&gt;* externalId&lt;/b&gt; : string&lt;br&gt;status : string&lt;br&gt;title : string?&lt;br&gt;sourceUrl : string?&lt;br&gt;address : string?&lt;br&gt;experience : string?&lt;br&gt;deadline : string | date?&lt;br&gt;commonInfo : object&lt;br&gt;&amp;nbsp;&amp;nbsp;↳ level : string?&lt;br&gt;companyInfo : object&lt;br&gt;&amp;nbsp;&amp;nbsp;↳ address : string?&lt;br&gt;salary : object?&lt;br&gt;&amp;nbsp;&amp;nbsp;↳ raw, min, max&lt;br&gt;&amp;nbsp;&amp;nbsp;↳ currency, unit, rangeCode&lt;br&gt;categories : array&lt;br&gt;&amp;nbsp;&amp;nbsp;↳ key, name, code, group&lt;br&gt;&amp;nbsp;&amp;nbsp;↳ level1Id, level2Id, level3Id&lt;br&gt;raw : object?&lt;/div&gt;&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;UQ (platformId, externalId)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#548235;strokeWidth=2;align=left;verticalAlign=top;spacing=12;fontSize=13;fontColor=#222222;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="390" y="150" width="290" height="590" as="geometry" />
+        </mxCell>
+        <mxCell id="mongo-categories" value="&lt;div style=&quot;font-size:18px;font-weight:bold;text-align:center;color:#274E13;&quot;&gt;job_categories&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;line-height:1.55;&quot;&gt;&lt;b&gt;* platformId&lt;/b&gt; : string&lt;br&gt;&lt;b&gt;* externalId&lt;/b&gt; : string&lt;br&gt;key : string?&lt;br&gt;name : string?&lt;br&gt;code : string?&lt;br&gt;group : string?&lt;br&gt;level1Id : string?&lt;br&gt;level2Id : string?&lt;br&gt;level3Id : string?&lt;/div&gt;&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;Taxonomy master / list fallback&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#548235;strokeWidth=2;align=left;verticalAlign=top;spacing=12;fontSize=13;fontColor=#222222;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="50" y="600" width="270" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="mongo-note" value="&lt;b&gt;Mongo extraction contract&lt;/b&gt;&lt;br&gt;• Scope: platformId ∈ {topdev, vietnamworks}&lt;br&gt;• jobs LEFT JOIN job_details on (platformId, externalId)&lt;br&gt;• job_categories is fallback when detail.categories is empty&lt;br&gt;• raw payload stays in MongoDB; it is not exposed by the serving API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;verticalAlign=top;spacing=12;fontSize=12;fontColor=#5F4B00;" parent="1" vertex="1">
+          <mxGeometry x="50" y="990" width="630" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="bq-silver" value="&lt;div style=&quot;font-size:18px;font-weight:bold;text-align:center;color:#1F4E78;&quot;&gt;silver_jobs&lt;/div&gt;&lt;div style=&quot;text-align:center;color:#666666;font-size:11px;&quot;&gt;PK logical: (batch_id, job_id)&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;line-height:1.34;&quot;&gt;&lt;b&gt;* job_id&lt;/b&gt; STRING R&lt;br&gt;source STRING R&lt;br&gt;external_id STRING R&lt;br&gt;source_url STRING&lt;br&gt;detail_status STRING R&lt;br&gt;title STRING R&lt;br&gt;company_name STRING&lt;br&gt;location_text STRING&lt;br&gt;seniority_raw STRING&lt;br&gt;seniority_normalized STRING&lt;br&gt;seniority_mapping_version STRING&lt;br&gt;experience_raw STRING&lt;br&gt;experience_min_years FLOAT64&lt;br&gt;experience_max_years FLOAT64&lt;br&gt;experience_parse_status STRING R&lt;br&gt;salary_raw STRING&lt;br&gt;salary_min_original FLOAT64&lt;br&gt;salary_max_original FLOAT64&lt;br&gt;salary_currency STRING&lt;br&gt;salary_period STRING&lt;br&gt;salary_min_vnd_month INT64&lt;br&gt;salary_max_vnd_month INT64&lt;br&gt;fx_rate_to_vnd FLOAT64&lt;br&gt;salary_fx_version STRING&lt;br&gt;salary_normalization_status STRING R&lt;br&gt;posted_at TIMESTAMP&lt;br&gt;&lt;b&gt;effective_posted_date DATE R&lt;/b&gt;&lt;br&gt;deadline_date DATE&lt;br&gt;posted_date_parse_status STRING R&lt;br&gt;deadline_date_parse_status STRING R&lt;br&gt;first_seen_at TIMESTAMP R&lt;br&gt;last_seen_at TIMESTAMP&lt;br&gt;&lt;b&gt;* batch_id STRING R&lt;/b&gt;&lt;br&gt;&lt;b&gt;categories RECORD REPEATED&lt;/b&gt;&lt;/div&gt;&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;PARTITION effective_posted_date&lt;br&gt;CLUSTER batch_id, source, seniority_normalized, job_id&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4472C4;strokeWidth=2;align=left;verticalAlign=top;spacing=10;fontSize=12;fontColor=#222222;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="1000" y="150" width="340" height="950" as="geometry" />
+        </mxCell>
+        <mxCell id="bq-category-record" value="&lt;div style=&quot;font-size:17px;font-weight:bold;text-align:center;color:#1F4E78;&quot;&gt;categories[]&lt;/div&gt;&lt;div style=&quot;text-align:center;color:#666666;font-size:11px;&quot;&gt;Nested in silver_jobs&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;line-height:1.55;&quot;&gt;&lt;b&gt;category_key&lt;/b&gt; STRING R&lt;br&gt;category_name STRING R&lt;br&gt;category_code STRING&lt;br&gt;category_path STRING&lt;br&gt;level1_id STRING&lt;br&gt;level2_id STRING&lt;br&gt;level3_id STRING&lt;/div&gt;&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;ARRAY&lt;STRUCT&gt; • not a table&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#70AD47;strokeWidth=2;align=left;verticalAlign=top;spacing=10;fontSize=12;fontColor=#222222;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="1420" y="150" width="280" height="320" as="geometry" />
+        </mxCell>
+        <mxCell id="bq-state" value="&lt;div style=&quot;font-size:17px;font-weight:bold;text-align:center;color:#1F4E78;&quot;&gt;warehouse_state&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;line-height:1.55;&quot;&gt;&lt;b&gt;* warehouse_name&lt;/b&gt; STRING R&lt;br&gt;published_batch_id STRING&lt;br&gt;updated_at TIMESTAMP&lt;/div&gt;&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;Singleton pointer: warehouse_name=&#39;serving&#39;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#A64D79;strokeWidth=2;align=left;verticalAlign=top;spacing=10;fontSize=12;fontColor=#222222;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="1420" y="540" width="280" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="bq-quarantine" value="&lt;div style=&quot;font-size:17px;font-weight:bold;text-align:center;color:#1F4E78;&quot;&gt;warehouse_quarantine&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;line-height:1.55;&quot;&gt;&lt;b&gt;batch_id&lt;/b&gt; STRING R&lt;br&gt;source STRING R&lt;br&gt;external_id STRING&lt;br&gt;stage STRING R&lt;br&gt;reason_code STRING R&lt;br&gt;reason_detail_sanitized STRING&lt;br&gt;created_at TIMESTAMP R&lt;/div&gt;&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;Rejected during Mongo → silver mapping&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#C55A11;strokeWidth=2;align=left;verticalAlign=top;spacing=10;fontSize=12;fontColor=#222222;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="1420" y="780" width="280" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="bq-gold" value="&lt;div style=&quot;font-size:18px;font-weight:bold;text-align:center;color:#1F4E78;&quot;&gt;gold_market_metrics&lt;/div&gt;&lt;div style=&quot;text-align:center;color:#666666;font-size:11px;&quot;&gt;PK logical: batch + window + dimension + value&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;line-height:1.55;&quot;&gt;&lt;b&gt;* batch_id&lt;/b&gt; STRING R&lt;br&gt;&lt;b&gt;* window&lt;/b&gt; STRING R&lt;br&gt;&lt;b&gt;* dimension&lt;/b&gt; STRING R&lt;br&gt;&lt;b&gt;* dimension_value&lt;/b&gt; STRING R&lt;br&gt;posting_count INT64 R&lt;br&gt;salary_disclosed_count INT64 R&lt;br&gt;salary_sample_count INT64 R&lt;br&gt;median_salary_vnd_month FLOAT64&lt;/div&gt;&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;CLUSTER batch_id, dimension, window&lt;br&gt;window: 90d | all_time&lt;br&gt;dimension: source | seniority | category&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8064A2;strokeWidth=2;align=left;verticalAlign=top;spacing=10;fontSize=12;fontColor=#222222;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="1820" y="150" width="350" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="bq-batches" value="&lt;div style=&quot;font-size:18px;font-weight:bold;text-align:center;color:#1F4E78;&quot;&gt;warehouse_batches&lt;/div&gt;&lt;div style=&quot;text-align:center;color:#666666;font-size:11px;&quot;&gt;Immutable publication catalog&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;line-height:1.48;&quot;&gt;&lt;b&gt;* batch_id&lt;/b&gt; STRING R&lt;br&gt;crawl_batch_id STRING&lt;br&gt;dagster_run_id STRING&lt;br&gt;data_as_of_at TIMESTAMP R&lt;br&gt;as_of_date DATE R&lt;br&gt;published_at TIMESTAMP R&lt;br&gt;source_jobs_total INT64 R&lt;br&gt;topdev_source_jobs INT64 R&lt;br&gt;vietnamworks_source_jobs INT64 R&lt;br&gt;silver_rows INT64 R&lt;br&gt;gold_rows INT64 R&lt;br&gt;quarantined_rows INT64 R&lt;br&gt;mapping_version STRING&lt;br&gt;salary_fx_version STRING&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#A64D79;strokeWidth=2;align=left;verticalAlign=top;spacing=10;fontSize=12;fontColor=#222222;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="1820" y="650" width="350" height="470" as="geometry" />
+        </mxCell>
+        <mxCell id="bq-note" value="&lt;b&gt;Legend / operational notes&lt;/b&gt;&lt;br&gt;* = logical key field • R = REQUIRED • ? = optional in Mongo&lt;br&gt;Solid connectors = join/reference • dashed = derived lineage&lt;br&gt;Candidate work tables (`*_candidate__...`) are transient and intentionally omitted.&lt;br&gt;BigQuery relationships are logical; the code does not declare physical foreign keys." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D9EAF7;strokeColor=#5B9BD5;align=left;verticalAlign=top;spacing=12;fontSize=12;fontColor=#1F2D3D;" parent="1" vertex="1">
+          <mxGeometry x="1420" y="1150" width="750" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="etl" value="ELT&lt;br&gt;&lt;font style=&quot;font-size:11px;font-weight:normal;&quot;&gt;LEFT JOIN • normalize • validate&lt;br&gt;APPEND • atomic publish&lt;/font&gt;" style="shape=process;whiteSpace=wrap;html=1;fillColor=#FFD966;strokeColor=#BF9000;strokeWidth=2;fontStyle=1;fontSize=16;fontColor=#5F4B00;" parent="1" vertex="1">
+          <mxGeometry x="760" y="480" width="170" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="e-mongo-detail" value="LEFT JOIN" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.22;entryX=0;entryY=0.22;startArrow=ERone;startFill=0;endArrow=ERzeroToOne;endFill=0;strokeColor=#548235;strokeWidth=2;fontSize=11;labelBackgroundColor=#FFFFFF;" parent="1" source="mongo-jobs" target="mongo-details" edge="1">
+          <mxGeometry y="-18" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-mongo-category" value="categoryExternalId fallback" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;startArrow=ERmany;startFill=0;endArrow=ERzeroToOne;endFill=0;strokeColor=#548235;strokeWidth=2;fontSize=11;labelBackgroundColor=#FFFFFF;" parent="1" source="mongo-jobs" target="mongo-categories" edge="1">
+          <mxGeometry y="-12" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-source-etl" value="EXTRACT" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.68;entryX=0;entryY=0.5;endArrow=block;endFill=1;strokeColor=#BF9000;strokeWidth=2;fontStyle=1;fontSize=11;labelBackgroundColor=#FFFFFF;" parent="1" source="mongo-details" target="etl" edge="1">
+          <mxGeometry y="-16" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-etl-silver" value="VALID" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.38;endArrow=block;endFill=1;strokeColor=#4472C4;strokeWidth=2;fontStyle=1;fontSize=11;labelBackgroundColor=#FFFFFF;" parent="1" source="etl" edge="1">
+          <mxGeometry x="-0.1442" y="-17" relative="1" as="geometry">
+            <mxPoint x="1000" y="533" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1000" y="533" />
+            </Array>
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-etl-quarantine" value="REJECTED → QUARANTINE" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;entryX=0;entryY=0.62;endArrow=block;endFill=1;strokeColor=#C55A11;strokeWidth=2;fontStyle=1;fontSize=11;labelBackgroundColor=#FFFFFF;" parent="1" source="etl" target="bq-quarantine" edge="1">
+          <mxGeometry y="-16" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="845" y="1215" />
+              <mxPoint x="1390" y="1215" />
+              <mxPoint x="1390" y="960" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-silver-categories" value="0..N nested structs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.25;entryX=0;entryY=0.5;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;strokeColor=#70AD47;strokeWidth=2;fontSize=11;labelBackgroundColor=#FFFFFF;" parent="1" source="bq-silver" target="bq-category-record" edge="1">
+          <mxGeometry y="-16" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-silver-gold" value="AGGREGATE • batch + UNNEST categories" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.38;entryX=0;entryY=0.75;dashed=1;endArrow=block;endFill=1;strokeColor=#8064A2;strokeWidth=2;fontStyle=1;fontSize=11;labelBackgroundColor=#FFFFFF;" parent="1" source="bq-silver" target="bq-gold" edge="1">
+          <mxGeometry y="-16" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1370" y="510" />
+              <mxPoint x="1760" y="510" />
+              <mxPoint x="1760" y="450" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-batches-silver" value="CATALOG → N SILVER ROWS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.95;entryX=1;entryY=0.92;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#A64D79;strokeWidth=2;fontStyle=1;fontSize=11;labelBackgroundColor=#FFFFFF;" parent="1" source="bq-batches" target="bq-silver" edge="1">
+          <mxGeometry y="-16" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1760" y="1125" />
+              <mxPoint x="1360" y="1125" />
+              <mxPoint x="1360" y="1025" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-batches-gold" value="1 batch → N metrics" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#A64D79;strokeWidth=2;fontSize=11;labelBackgroundColor=#FFFFFF;" parent="1" source="bq-batches" target="bq-gold" edge="1">
+          <mxGeometry y="-14" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-batches-quarantine" value="0..N rejected" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.58;entryX=1;entryY=0.58;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;strokeColor=#A64D79;strokeWidth=2;fontSize=11;labelBackgroundColor=#FFFFFF;" parent="1" source="bq-batches" target="bq-quarantine" edge="1">
+          <mxGeometry y="-14" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-state-batches" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.15;startArrow=ERzeroToOne;startFill=0;endArrow=ERone;endFill=0;strokeColor=#A64D79;strokeWidth=2;" parent="1" source="bq-state" target="bq-batches" edge="1">
+          <mxGeometry y="-16" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1760" y="630" />
+              <mxPoint x="1760" y="720" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
