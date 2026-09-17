@@ -28,6 +28,7 @@ from app.domain.ports.rate_limiter import RateLimiter  # ★ THÊM Ở TUẦN 6
 # Adapters (implementation) — chỉ composition root này được import infrastructure
 from app.infrastructure.auth.config_key_store import ConfigApiKeyStore  # ★ THÊM Ở TUẦN 6
 from app.infrastructure.cache.memory import InMemoryCache
+from app.infrastructure.cache.none import NoOpCache  # ★ LOAD-TEST — market cache-miss microtest
 from app.infrastructure.cache.redis import RedisCache
 from app.infrastructure.ratelimit.memory import InMemoryRateLimiter  # ★ THÊM Ở TUẦN 6
 from app.infrastructure.ratelimit.redis import RedisRateLimiter  # ★ THÊM Ở TUẦN 7
@@ -57,7 +58,7 @@ def _build_repository(
 def get_repository() -> JobRepository:
     s = get_settings()
     # target_key là tuple hashable (cho lru_cache) khớp thứ tự tham số ReadTarget.
-    target_key = (s.bq_project, s.bq_dataset, s.bq_location, s.bq_maximum_bytes_billed)
+    target_key = (s.bq_project, s.bq_dataset, s.bq_location, s.bq_maximum_bytes_billed, s.bq_use_query_cache)
     return _build_repository(s.warehouse_backend, target_key, s.duckdb_path, s.query_timeout_s)
 
 
@@ -80,7 +81,7 @@ def _build_metrics_repository(
 
 def get_metrics_repository() -> MetricsRepository:
     s = get_settings()
-    target_key = (s.bq_project, s.bq_dataset, s.bq_location, s.bq_maximum_bytes_billed)
+    target_key = (s.bq_project, s.bq_dataset, s.bq_location, s.bq_maximum_bytes_billed, s.bq_use_query_cache)
     return _build_metrics_repository(
         s.warehouse_backend, target_key, s.duckdb_path, s.query_timeout_s,
     )
@@ -93,6 +94,8 @@ def _build_cache(backend: str, redis_url: str, ttl: int) -> CacheBackend:
         return InMemoryCache(ttl_seconds=ttl)
     if backend == "redis":
         return RedisCache(redis_url, ttl_seconds=ttl)
+    if backend == "none":                                    # ★ LOAD-TEST — no-op, luôn miss
+        return NoOpCache()
     raise RuntimeError(f"cache_backend chưa được hỗ trợ: {backend}")
 
 

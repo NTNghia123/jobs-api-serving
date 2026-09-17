@@ -53,6 +53,8 @@ class ReadTarget:
     dataset: str
     location: str = "asia-southeast1"
     maximum_bytes_billed: int = 2_000_000_000
+    # ★ LOAD-TEST — BigQuery result cache. false → cold-query run (service perf). Mặc định true (prod).
+    use_query_cache: bool = True
 
     def __post_init__(self) -> None:
         for part in (self.project, self.dataset):

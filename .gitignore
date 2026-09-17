@@ -6,6 +6,7 @@ __pycache__/
 openapi.json
 *.duckdb
 Report/
+/reports/
 de-plan-jobs-ver2.md
 .tmp-*-render*/
 

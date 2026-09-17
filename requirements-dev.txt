@@ -5,3 +5,7 @@ ruff>=0.6
 # ★ THÊM Ở TUẦN 7 — chất lượng mã & quét lỗ hổng phụ thuộc
 mypy>=1.11
 pip-audit>=2.7
+# ★ LOAD-TEST — pin version để tái lập (báo cáo lưu version này trong metadata)
+locust==2.32.4
+# ★ LOAD-TEST — cold-start gate + Step 2/3 instance evidence qua Monitoring API
+google-cloud-monitoring>=2.19

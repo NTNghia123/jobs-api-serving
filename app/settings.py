@@ -40,7 +40,9 @@ class Settings(BaseSettings):
     )
 
     # --- môi trường ---
-    env: str = Field(default="local", description="local | staging | prod")
+    # Literal (không phải str tự do): 'production'/'PROD'/typo bị TỪ CHỐI ở boot → guard prod
+    # (vd cache_backend='none') không bị bypass do env sai chính tả. Deploy chỉ nhận staging|prod.
+    env: Literal["local", "staging", "prod"] = Field(default="local", description="local | staging | prod")
     debug: bool = False
 
     # --- hợp đồng API ---
@@ -87,6 +89,12 @@ class Settings(BaseSettings):
         default=2_000_000_000, ge=1,
         description="Trần byte mỗi truy vấn — cost guard; vượt → BQ từ chối job.",
     )
+    # ★ LOAD-TEST — bật/tắt BigQuery result cache. Mặc định true (như prod). Đặt false ở service
+    # perf để đo đường "cold-query" của /jobs/search (mỗi query quét thật, không ăn cache kết quả).
+    bq_use_query_cache: bool = Field(
+        default=True,
+        description="BigQuery result cache. false → cold-query run (chỉ dùng ở service perf, KHÔNG prod).",
+    )
 
     # ★ THÊM Ở TUẦN 3 — đường dẫn file kho DuckDB (API đọc từ đây, read-only).
     duckdb_path: str = Field(
@@ -104,7 +112,8 @@ class Settings(BaseSettings):
     )
 
     # ★ THÊM Ở TUẦN 5 — cache cho /market/metrics.
-    cache_backend: str = Field(default="memory", description="memory | redis")
+    # ★ LOAD-TEST — thêm 'none' (no-op) cho market cache-miss microtest; guard chặn 'none' ở prod.
+    cache_backend: str = Field(default="memory", description="memory | redis | none")
     redis_url: str = Field(
         default="redis://localhost:6379/0",
         description="Chỉ dùng khi cache_backend=redis. Cần một Redis server đang chạy.",
@@ -171,6 +180,28 @@ class Settings(BaseSettings):
                 "warehouse_backend='bigquery' cần JOBS_API_BQ_PROJECT và JOBS_API_BQ_DATASET."
             )
         return self
+
+    @model_validator(mode="after")
+    def _refuse_noop_cache_in_prod(self):
+        # ★ LOAD-TEST guard: cache_backend='none' và BQ cache-off chỉ dùng trên service perf.
+        # Vô tình bật ở prod → tăng số query/bytes billed. FAIL-FAST.
+        if self.env == "prod" and self.cache_backend == "none":
+            raise ValueError(
+                "cache_backend='none' bị cấm khi env=prod (chỉ dùng cho load-test trên service perf)."
+            )
+        if self.env == "prod" and not self.bq_use_query_cache:
+            raise ValueError(
+                "bq_use_query_cache=false bị cấm khi env=prod "
+                "(cold-query chỉ dùng cho load-test trên service perf)."
+            )
+        return self
+
+    @field_validator("cache_backend")
+    @classmethod
+    def _cache_backend_available(cls, v: str):
+        if v in {"memory", "redis", "none"}:
+            return v
+        raise ValueError(f"cache_backend='{v}' không hỗ trợ. Dùng 'memory', 'redis' hoặc 'none'.")
 
     @field_validator("page_token_secret")
     @classmethod

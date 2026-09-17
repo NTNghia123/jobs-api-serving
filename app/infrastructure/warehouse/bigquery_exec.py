@@ -7,6 +7,7 @@ elapsed_ms). SQL + params thuần đến từ bigquery_read_sql.py. Xem docs/adr
 from __future__ import annotations
 
 import logging
+import re
 import time
 from concurrent.futures import TimeoutError as FutureTimeoutError
 
@@ -15,13 +16,28 @@ from opentelemetry import trace  # ★ THÊM Ở TUẦN 8
 
 from app.errors import QueryTimeoutError
 from app.infrastructure.warehouse.bigquery_read_sql import QueryParam, ReadTarget, SqlAndParams
-from app.observability.logging import log_event
+from app.observability.logging import get_request_id, log_event
 
 logger = logging.getLogger("warehouse.bigquery")
 
 # ★ TUẦN 8 — cancel là best-effort; GIỚI HẠN thời gian để lỗi timeout không treo response 504
 # thêm (mặc định API BigQuery không đặt trần → có thể chờ rất lâu). Giữ nhỏ để tổng vẫn < Cloud Run 25s.
 _CANCEL_TIMEOUT_S = 5
+
+
+def load_test_run_label(request_id: str) -> str | None:
+    """Lấy run-id từ ``lt_<run-id>:<phase>:<request>`` và chuẩn hóa thành BigQuery label.
+
+    Marker riêng ``lt_`` tránh biến request-id bình thường có dấu ``:`` thành instrumentation load-test.
+    """
+    if not request_id.startswith("lt_"):
+        return None
+    run_id, sep, _rest = request_id.partition(":")
+    run_id = run_id[3:]
+    if not sep or not run_id:
+        return None
+    value = re.sub(r"[^a-z0-9_-]", "_", run_id.lower()).strip("_-")[:63]
+    return value or None
 
 
 def to_bq_params(params: list[QueryParam]) -> list[bigquery.ScalarQueryParameter]:
@@ -49,9 +65,16 @@ class BigQueryExecutor:
         self._tracer = tracer or trace.get_tracer(__name__)
 
     def run(self, sp: SqlAndParams, *, op: str) -> list[bigquery.table.Row]:
+        run_label = load_test_run_label(get_request_id())
+        cfg_args = {
+            "maximum_bytes_billed": self.target.maximum_bytes_billed,
+            "query_parameters": to_bq_params(sp.params),
+            "use_query_cache": self.target.use_query_cache,
+        }
+        if run_label:
+            cfg_args["labels"] = {"load_test_run": run_label}
         cfg = bigquery.QueryJobConfig(
-            maximum_bytes_billed=self.target.maximum_bytes_billed,
-            query_parameters=to_bq_params(sp.params),
+            **cfg_args,
         )
         # ★ TUẦN 8 — span bọc CẢ vòng đời (submit + result). CM mặc định tự record exception
         # + set status ERROR khi lỗi thoát ra → KHÔNG record thủ công (tránh ghi hai lần).
